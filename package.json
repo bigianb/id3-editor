@@ -1,0 +1,16 @@
+{
+  "name": "id3-editor",
+  "version": "1.0.0",
+  "description": "ID Tech3 editor",
+  "license": "GPL-3.0-or-later",
+  "author": "Ian Brown",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "electron": "^37.3.1"
+  }
+}
