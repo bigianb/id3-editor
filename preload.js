@@ -9,3 +9,6 @@ contextBridge.exposeInMainWorld('versions', {
   ping: () => ipcRenderer.invoke('ping')
   // we can also expose variables, not just functions
 })
+
+contextBridge.exposeInMainWorld(
+  'bsp', { load: (name) => ipcRenderer.invoke('bsp-load', name) })
