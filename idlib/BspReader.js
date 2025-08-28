@@ -40,20 +40,19 @@ export default class BspReader {
     parseBsp(data) {
         // Parse the BSP data
         const dv = new DataView(data.buffer);
-        console.log(dv)
+        console.log(dv);
         const header = this.readBSPHeader(dv);
         console.log('BSP Header:', header);
 
         if (this.isAlice(header)) {
             return this.parseAliceBsp(header, dv);
         }
-        return {header};
+        return { header };
     }
 
     parseAliceBsp(header, dv) {
         // Parse the Alice BSP data
         const shaders = this.readAliceShaders(dv, header.directories[AliceLumpIDs.SHADERS]);
-        const entities = this.readStringLump(dv, header.directories[AliceLumpIDs.ENTITIES]);
         const planes = this.readAlicePlanes(dv, header.directories[AliceLumpIDs.PLANES]);
         const surfaces = this.readAliceSurfaces(dv, header.directories[AliceLumpIDs.SURFACES]);
         const drawVerts = this.readAliceDrawVerts(dv, header.directories[AliceLumpIDs.DRAWVERTS]);
@@ -61,17 +60,30 @@ export default class BspReader {
         const leafBrushes = this.readUint32ArrayLump(dv, header.directories[AliceLumpIDs.LEAFBRUSHES]);
         const leafSurfaces = this.readUint32ArrayLump(dv, header.directories[AliceLumpIDs.LEAFSURFACES]);
         const leafs = this.readAliceLeafs(dv, header.directories[AliceLumpIDs.LEAFS]);
-    
-        console.log(leafs)
+        const nodes = this.readNodes(dv, header.directories[AliceLumpIDs.NODES]);
+        const brushSides = this.readBrushSides(dv, header.directories[AliceLumpIDs.BRUSHSIDES]);
+        const brushes = this.readBrushes(dv, header.directories[AliceLumpIDs.BRUSHES]);
+        const fogs = this.readFogs(dv, header.directories[AliceLumpIDs.FOGS]);
+        const models = this.readModels(dv, header.directories[AliceLumpIDs.MODELS]);
+        const entities = this.readStringLump(dv, header.directories[AliceLumpIDs.ENTITIES]);
+        const visibility = this.readVisibility(dv, header.directories[AliceLumpIDs.VISIBILITY]);
+        // skip LIGHTGRID for now
+        const entLights = this.readEntLights(dv, header.directories[AliceLumpIDs.ENTLIGHTS]);
 
-        return {header, shaders, entities, planes, surfaces, drawVerts, drawIndices, leafBrushes, leafSurfaces, leafs};
+        console.log(entLights);
+
+        return {
+            header, shaders, entities, planes, surfaces,
+            drawVerts, drawIndices, leafBrushes, leafSurfaces, leafs, nodes,
+            brushSides, brushes, fogs, models, visibility, entLights
+        };
     }
 
     isAlice(header) {
         return header.magic === 'FAKK' && header.version === 42;
     }
 
-    readBSPHeader(dv){
+    readBSPHeader(dv) {
         const header = {
             magic: String.fromCharCode(
                 dv.getUint8(0),
@@ -83,15 +95,15 @@ export default class BspReader {
             directories: []
         };
         let offset = 8;
-        if (header.magic == 'FAKK'){
+        if (header.magic == 'FAKK') {
             header.checksum = dv.getUint32(offset, true);
             offset += 4;
         }
         let numDirs = 17;
-        if (this.isAlice(header)){
+        if (this.isAlice(header)) {
             numDirs = 20;
         }
-        for (let i=0; i<numDirs; ++i){
+        for (let i = 0; i < numDirs; ++i) {
             header.directories.push({
                 offset: dv.getUint32(offset, true),
                 length: dv.getUint32(offset + 4, true)
@@ -101,7 +113,7 @@ export default class BspReader {
         return header;
     }
 
-    readUint32ArrayLump(dv, directory){
+    readUint32ArrayLump(dv, directory) {
         const values = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -109,6 +121,147 @@ export default class BspReader {
             values.push(dv.getUint32(i, true));
         }
         return values;
+    }
+
+    readVisibility(dv, directory) {
+        const vis = {
+            numClusters: 0,
+            clusterBytes: 0,
+            vis: []
+        };
+        if (directory.length > 8) {
+            const start = directory.offset;
+            vis.numClusters = dv.getInt32(start, true);
+            vis.clusterBytes = dv.getInt32(start + 4, true);
+            for (let i = start + 8; i < start + directory.length; ++i) {
+                vis.vis.push(dv.getUint8(i));
+            }
+        }
+
+        return vis;
+    }
+
+    // mapspherel_t
+    readEntLights(dv, directory) {
+        const objs = [];
+        const start = directory.offset;
+        const end = start + directory.length;
+        let i = start;
+        while (i < end) {
+            objs.push({
+                origin: this.readVec3(dv, i),
+                colour: this.readVec3(dv, i + 12),
+                intensity: dv.getFloat32(i + 24, true),
+                leaf: dv.getInt32(i + 28, true),
+                needs_trace: dv.getInt32(i + 32, true),
+                spot_light: dv.getInt32(i + 36, true),
+                spot_dir: this.readVec3(dv, i + 40),
+                spot_radiusbydistance: dv.getFloat32(i + 52, true),
+                unknown: dv.getInt32(i + 56, true)
+            });
+            i += 15 * 4;
+        }
+        return objs;
+    }
+
+    readModels(dv, directory) {
+        const objs = [];
+        const start = directory.offset;
+        const end = start + directory.length;
+        let i = start;
+        while (i < end) {
+            objs.push({
+                mins: [
+                    dv.getFloat32(i, true),
+                    dv.getFloat32(i + 4, true),
+                    dv.getFloat32(i + 8, true)
+                ],
+                maxs: [
+                    dv.getFloat32(i + 12, true),
+                    dv.getFloat32(i + 16, true),
+                    dv.getFloat32(i + 20, true)
+                ],
+                firstSurface: dv.getInt32(i + 24, true),
+                numSurfaces: dv.getInt32(i + 28, true),
+                firstBrush: dv.getInt32(i + 32, true),
+                numBrushes: dv.getInt32(i + 36, true)
+            });
+            i += 40;
+        }
+        return objs;
+    }
+
+    readFogs(dv, directory) {
+        const objs = [];
+        const start = directory.offset;
+        const end = start + directory.length;
+        let i = start;
+        while (i < end) {
+            objs.push({
+                shader: this.readString(dv, i, 64),
+                brushNum: dv.getInt32(i + 64, true),
+                visibleSide: dv.getInt32(i + 68, true)
+            });
+            i += 72;
+        }
+        return objs;
+    }
+
+    readBrushes(dv, directory) {
+        const objs = [];
+        const start = directory.offset;
+        const end = start + directory.length;
+        let i = start;
+        while (i < end) {
+            objs.push({
+                firstSide: dv.getInt32(i, true),
+                numSides: dv.getInt32(i + 4, true),
+                shaderNum: dv.getInt32(i + 4, true)
+            });
+            i += 12;
+        }
+        return objs;
+    }
+
+    readBrushSides(dv, directory) {
+        const objs = [];
+        const start = directory.offset;
+        const end = start + directory.length;
+        let i = start;
+        while (i < end) {
+            objs.push({
+                planeNum: dv.getInt32(i, true),
+                shaderNum: dv.getInt32(i + 4, true)
+            });
+            i += 8;
+        }
+        return objs;
+    }
+
+    readNodes(dv, directory) {
+        const nodes = [];
+        const start = directory.offset;
+        const end = start + directory.length;
+        for (let i = start; i < end; i += 9 * 4) {
+            nodes.push({
+                planeNum: dv.getInt32(i, true),
+                Children: [
+                    dv.getInt32(i + 4, true),
+                    dv.getInt32(i + 8, true),
+                ],
+                mins: [
+                    dv.getInt32(i + 12, true),
+                    dv.getInt32(i + 16, true),
+                    dv.getInt32(i + 20, true)
+                ],
+                maxs: [
+                    dv.getInt32(i + 24, true),
+                    dv.getInt32(i + 28, true),
+                    dv.getInt32(i + 32, true)
+                ],
+            });
+        }
+        return nodes;
     }
 
     readAliceLeafs(dv, directory) {
@@ -138,7 +291,7 @@ export default class BspReader {
         return leafs;
     }
 
-    readAliceDrawVerts(dv, directory){
+    readAliceDrawVerts(dv, directory) {
         const drawVerts = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -146,19 +299,19 @@ export default class BspReader {
             drawVerts.push({
                 xyz: this.readVec3(dv, i),
                 st: [
-                    dv.getFloat32(i+12, true),
-                    dv.getFloat32(i+16, true)
+                    dv.getFloat32(i + 12, true),
+                    dv.getFloat32(i + 16, true)
                 ],
                 lightmap: [
-                    dv.getFloat32(i+20, true),
-                    dv.getFloat32(i+24, true)
+                    dv.getFloat32(i + 20, true),
+                    dv.getFloat32(i + 24, true)
                 ],
-                normal: this.readVec3(dv, i+28),
+                normal: this.readVec3(dv, i + 28),
                 colour: [
-                    dv.getUint8(i+40, true),
-                    dv.getUint8(i+41, true),
-                    dv.getUint8(i+42, true),
-                    dv.getUint8(i+43, true)
+                    dv.getUint8(i + 40, true),
+                    dv.getUint8(i + 41, true),
+                    dv.getUint8(i + 42, true),
+                    dv.getUint8(i + 43, true)
                 ]
             });
         }
@@ -228,7 +381,7 @@ export default class BspReader {
         const end = start + directory.length;
         let i = start;
         while (i < end) {
-            let shader = {shader: this.readString(dv, i, 64)}
+            let shader = { shader: this.readString(dv, i, 64) };
             i += 64;
             shader.surfaceFlags = dv.getUint32(i, true);
             i += 4;
