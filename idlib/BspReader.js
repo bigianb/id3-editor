@@ -40,10 +40,8 @@ export default class BspReader {
     parseBsp(data) {
         // Parse the BSP data
         const dv = new DataView(data.buffer);
-        console.log(dv);
         const header = this.readBSPHeader(dv);
-        console.log('BSP Header:', header);
-
+        //console.log(header)
         if (this.isAlice(header)) {
             return this.parseAliceBsp(header, dv);
         }
@@ -52,11 +50,16 @@ export default class BspReader {
 
     parseAliceBsp(header, dv) {
         // Parse the Alice BSP data
+
+        // Used for Drawing
         const shaders = this.readAliceShaders(dv, header.directories[AliceLumpIDs.SHADERS]);
-        const planes = this.readAlicePlanes(dv, header.directories[AliceLumpIDs.PLANES]);
         const surfaces = this.readAliceSurfaces(dv, header.directories[AliceLumpIDs.SURFACES]);
         const drawVerts = this.readAliceDrawVerts(dv, header.directories[AliceLumpIDs.DRAWVERTS]);
         const drawIndices = this.readUint32ArrayLump(dv, header.directories[AliceLumpIDs.DRAWINDICES]);
+        // skip LIGHTGRID for now
+        
+        // Used for collision etc
+        const planes = this.readAlicePlanes(dv, header.directories[AliceLumpIDs.PLANES]);
         const leafBrushes = this.readUint32ArrayLump(dv, header.directories[AliceLumpIDs.LEAFBRUSHES]);
         const leafSurfaces = this.readUint32ArrayLump(dv, header.directories[AliceLumpIDs.LEAFSURFACES]);
         const leafs = this.readAliceLeafs(dv, header.directories[AliceLumpIDs.LEAFS]);
@@ -67,15 +70,15 @@ export default class BspReader {
         const models = this.readModels(dv, header.directories[AliceLumpIDs.MODELS]);
         const entities = this.readStringLump(dv, header.directories[AliceLumpIDs.ENTITIES]);
         const visibility = this.readVisibility(dv, header.directories[AliceLumpIDs.VISIBILITY]);
-        // skip LIGHTGRID for now
+        
         const entLights = this.readEntLights(dv, header.directories[AliceLumpIDs.ENTLIGHTS]);
-
-        console.log(entLights);
+        const entLightsVis = this.readEntLightsVis(dv, header.directories[AliceLumpIDs.ENTLIGHTSVIS]);
+        const lightDefs = this.readLightDefs(dv, header.directories[AliceLumpIDs.LIGHTDEFS]);
 
         return {
             header, shaders, entities, planes, surfaces,
             drawVerts, drawIndices, leafBrushes, leafSurfaces, leafs, nodes,
-            brushSides, brushes, fogs, models, visibility, entLights
+            brushSides, brushes, fogs, models, visibility, entLights, entLightsVis, lightDefs
         };
     }
 
@@ -141,6 +144,22 @@ export default class BspReader {
         return vis;
     }
 
+    // I don't understand this but it appears to be all integers
+    readEntLightsVis(dv, directory) {
+        const obj = {len: 0, data: []};
+        const start = directory.offset;
+        const end = start + directory.length;
+        let i = start;
+        while (i < end) {
+            obj.data.push(
+                dv.getInt32(i, true),
+            );
+            obj.len += 1;
+            i += 4;
+        }
+        return obj;
+    }
+
     // mapspherel_t
     readEntLights(dv, directory) {
         const objs = [];
@@ -160,6 +179,30 @@ export default class BspReader {
                 unknown: dv.getInt32(i + 56, true)
             });
             i += 15 * 4;
+        }
+        return objs;
+    }
+
+    readLightDefs(dv, directory) {
+        const objs = [];
+        const start = directory.offset;
+        const end = start + directory.length;
+        let i = start;
+        while (i < end) {
+            objs.push({
+                lightIntensity: dv.getInt32(i, true),
+                lightAngle: dv.getInt32(i + 4, true),
+                lightmapResolution: dv.getInt32(i + 8, true),
+                twoSided: dv.getInt32(i + 12, true) != 0,
+                lightLinear: dv.getInt32(i + 16, true) != 0,
+                lightColor: this.readVec3(dv, i + 20),
+                lightFalloff: dv.getFloat32(i + 32, true),
+                backsplashFraction: dv.getFloat32(i + 36, true),
+                backsplashDistance: dv.getFloat32(i + 40, true),
+                lightSubdivide: dv.getFloat32(i + 44, true),
+                autosprite: dv.getInt32(i + 48, true) != 0,
+            });
+            i += 52;
         }
         return objs;
     }

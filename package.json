@@ -5,12 +5,18 @@
   "license": "GPL-3.0-or-later",
   "author": "Ian Brown",
   "type": "module",
-  "main": "main.js",
+  "main": "./out/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "prebuild": "electron-vite build"
   },
   "devDependencies": {
-    "electron": "^37.3.1"
+    "electron": "^37.3.1",
+    "electron-vite": "^4.0.0",
+    "vite-plugin-solid": "^2.11.8"
+  },
+  "dependencies": {
+    "three": "^0.179.1"
   }
 }
