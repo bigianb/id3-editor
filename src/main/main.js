@@ -4,7 +4,7 @@ import path from 'node:path';
 import BspReader from '../../idlib/BspReader.js';
 
 //const __dirname = path.dirname(fileURLToPath(import.meta.url));
-let basePath = path.join(__dirname, 'alice-data');
+let basePath = path.join(__dirname, '..', '..', 'alice-data');
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
