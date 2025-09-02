@@ -7,7 +7,12 @@ contextBridge.exposeInMainWorld('versions', {
   chrome: () => process.versions.chrome,
   electron: () => process.versions.electron,
   // we can also expose variables, not just functions
-})
+});
 
-contextBridge.exposeInMainWorld(
-  'bsp', { load: (name) => ipcRenderer.invoke('bsp-load', name) })
+contextBridge.exposeInMainWorld('bsp', {
+  load: (name) => ipcRenderer.invoke('bsp-load', name)
+});
+
+contextBridge.exposeInMainWorld('basefs', {
+  load: (name) => ipcRenderer.invoke('file-load', name)
+});

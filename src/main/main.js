@@ -1,9 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron/main';
 import path from 'node:path';
-//import { fileURLToPath } from 'url';
+import fs from 'fs';
 import BspReader from '../../idlib/BspReader.js';
 
-//const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let basePath = path.join(__dirname, '..', '..', 'alice-data');
 
 const createWindow = () => {
@@ -33,8 +32,19 @@ app.whenReady().then(() => {
   ipcMain.handle('bsp-load', async (event, bspName) => {
     // Handle the request to load a BSP file
     const bsp = await new BspReader(basePath).load(bspName);
-    return bsp;
+
+    // Useful for development
+    fs.writeFileSync(bspName + '.json', JSON.stringify(bsp, undefined, 2));
+    return {basePath, ...bsp};
   });
+
+  ipcMain.handle('file-load', async (event, fileName) => {
+    // Handle the request to load a file from the game fs
+
+    const fileContents = await fs.promises.readFile(path.join(basePath, fileName));
+    return fileContents;
+  });
+
   createWindow();
 
   app.on('activate', () => {
@@ -45,7 +55,8 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  // For development, ignore the mac behavior
+  //if (process.platform !== 'darwin') {
     app.quit();
-  }
+  //}
 });
