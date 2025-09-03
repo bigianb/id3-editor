@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
 import BspRenderer from './bspRenderer.js';
 
 //const information = document.getElementById('info');
 //information.innerText = `This app is using Chrome (v${versions.chrome()}), Node.js (v${versions.node()}), and Electron (v${versions.electron()})`;
 
 let scene = null;
+let controls = null;
 
 const func = async () => {
   // potears3 is the smallest bsp file
@@ -17,6 +19,8 @@ func();
 
 const width = window.innerWidth, height = window.innerHeight;
 const camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 50000);
+
+const clock = new THREE.Clock();
 
 /*
 {
@@ -38,9 +42,27 @@ renderer.setSize(width, height);
 renderer.setAnimationLoop(animate);
 document.body.appendChild(renderer.domElement);
 
+controls = new FirstPersonControls( camera, renderer.domElement );
+controls.movementSpeed = 150;
+controls.lookSpeed = 0.1;
+
+window.addEventListener( 'resize', onWindowResize );
+
+function onWindowResize() {
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize( window.innerWidth, window.innerHeight );
+
+  controls.handleResize();
+
+}
+
 // animation
 function animate(time) {
   if (scene) {
+    controls.update( clock.getDelta() );
     renderer.render(scene, camera);
   }
 }
