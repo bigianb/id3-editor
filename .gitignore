@@ -1,5 +1,5 @@
 alice-data
-potears3.json
+*.bsp.json
 .DS_Store
 
 # Logs
@@ -141,4 +141,3 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-

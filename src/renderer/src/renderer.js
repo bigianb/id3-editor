@@ -7,35 +7,32 @@ import BspRenderer from './bspRenderer.js';
 
 let scene = null;
 let controls = null;
-
-const func = async () => {
-  // potears3 is the smallest bsp file
-  const response = await bsp.load('potears3');
-  const bspRenderer = new BspRenderer(response);
-  scene = await bspRenderer.convertToScene();
-};
-
-func();
+let bspObject = null;
 
 const width = window.innerWidth, height = window.innerHeight;
 const camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 50000);
-
 const clock = new THREE.Clock();
 
-/*
-{
-"classname" "info_player_start"
-"angle" "90"
-"origin" "-832 -1360 200"
-"targetname" "potears3_start1"
-}
-*/
-camera.position.x = -832;
-camera.position.y = -1360;
-camera.position.z = 200;
+const func = async () => {
+  // potears3 is the smallest bsp file
+  //bspObject = await bsp.load('potears3');
+  bspObject = await bsp.load('pandemonium');
+  const bspRenderer = new BspRenderer(bspObject);
+  scene = await bspRenderer.convertToScene();
 
-camera.up.set(0, 0, 1);
-camera.lookAt(-832, 0, 200);
+  const InfoPlayerStart = bspObject.entities.find(ent => ent.classname === 'info_player_start');
+  camera.matrix.identity();
+  camera.up.set(0, 0, 1);
+  // Camera looks along its z axis and we want it to look along world y so rotate 90 deg around x.
+  //camera.rotateX(THREE.MathUtils.degToRad(90));
+  //camera.rotateY(THREE.MathUtils.degToRad(InfoPlayerStart.angle));
+  camera.rotateX(THREE.MathUtils.degToRad(InfoPlayerStart.angle));
+  camera.position.set(InfoPlayerStart.origin[0], InfoPlayerStart.origin[1], InfoPlayerStart.origin[2]);
+  
+  console.log(camera)
+};
+
+func();
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(width, height);

@@ -34,7 +34,7 @@ app.whenReady().then(() => {
     const bsp = await new BspReader(basePath).load(bspName);
 
     // Useful for development
-    fs.writeFileSync(bspName + '.json', JSON.stringify(bsp, undefined, 2));
+    fs.writeFileSync(bspName + '.bsp.json', JSON.stringify(bsp, undefined, 2));
     return {basePath, ...bsp};
   });
 

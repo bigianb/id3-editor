@@ -57,7 +57,7 @@ export default class BspReader {
         const drawVerts = this.readAliceDrawVerts(dv, header.directories[AliceLumpIDs.DRAWVERTS]);
         const drawIndices = this.readUint32ArrayLump(dv, header.directories[AliceLumpIDs.DRAWINDICES]);
         // skip LIGHTGRID for now
-        
+
         // Used for collision etc
         const planes = this.readAlicePlanes(dv, header.directories[AliceLumpIDs.PLANES]);
         const leafBrushes = this.readUint32ArrayLump(dv, header.directories[AliceLumpIDs.LEAFBRUSHES]);
@@ -68,9 +68,9 @@ export default class BspReader {
         const brushes = this.readBrushes(dv, header.directories[AliceLumpIDs.BRUSHES]);
         const fogs = this.readFogs(dv, header.directories[AliceLumpIDs.FOGS]);
         const models = this.readModels(dv, header.directories[AliceLumpIDs.MODELS]);
-        const entities = this.readStringLump(dv, header.directories[AliceLumpIDs.ENTITIES]);
+        const entities = this.readEntities(dv, header.directories[AliceLumpIDs.ENTITIES]);
         const visibility = this.readVisibility(dv, header.directories[AliceLumpIDs.VISIBILITY]);
-        
+
         const entLights = this.readEntLights(dv, header.directories[AliceLumpIDs.ENTLIGHTS]);
         const entLightsVis = this.readEntLightsVis(dv, header.directories[AliceLumpIDs.ENTLIGHTSVIS]);
         const lightDefs = this.readLightDefs(dv, header.directories[AliceLumpIDs.LIGHTDEFS]);
@@ -126,6 +126,47 @@ export default class BspReader {
         return values;
     }
 
+    readEntities(dv, directory) {
+        const str = this.readStringLump(dv, directory);
+        const elements = str.replaceAll("}", "").split("{");
+        const entities = [];
+        for (const el of elements) {
+            let trimmed = el.trim();
+            if (trimmed.length > 0) {       
+                entities.push(this.parseEntity(trimmed));
+            }
+        }
+        return entities;
+    }
+
+    parseFloatArray(str)
+    {
+        return str.split(' ').map(x => Number.parseFloat(x));
+    }
+
+    parseEntity(strRep) {
+        const entity = {};
+
+        const lines = strRep.split('\n');
+        for (const line of lines){
+            const kv = line.split('" "').map(x => x.replaceAll('"', ''));
+            if (kv.length != 2){
+                console.error(`Failed to parse entity entry ${line}. Entity is:\n {${strRep}}`);
+            } else {
+                const key = kv[0];
+                let val = kv[1];
+                if (key === 'origin' || key === '_color' || key === 'angles'){
+                    val = this.parseFloatArray(val);
+                } else if (key === 'angle' || key === 'scale' || key === 'speed' || key === 'light'){
+                    val = Number.parseFloat(val);
+                }
+                entity[key] = val;
+            }
+        }
+
+        return entity;
+    }
+
     readVisibility(dv, directory) {
         const vis = {
             numClusters: 0,
@@ -146,7 +187,7 @@ export default class BspReader {
 
     // I don't understand this but it appears to be all integers
     readEntLightsVis(dv, directory) {
-        const obj = {len: 0, data: []};
+        const obj = { len: 0, data: [] };
         const start = directory.offset;
         const end = start + directory.length;
         let i = start;
