@@ -41,7 +41,7 @@ export default
                 const texture = new THREE.DataTexture(imageData, width, height);
                 texture.colorSpace = THREE.SRGBColorSpace;
                 texture.needsUpdate = true;
-                texture.flipY = true;
+                texture.flipY = false;
                 texture.wrapS = THREE.RepeatWrapping;
                 texture.wrapT = THREE.RepeatWrapping;
                 this.textures.push(texture);
@@ -58,7 +58,7 @@ export default
 
         const scene = new THREE.Scene();
 
-        for (let surface of this.bspObject.surfaces) {
+        for (const surface of this.bspObject.surfaces) {
             if (surface.surfaceType !== SurfaceType.MST_PLANAR) {
                 console.warn(`Unsupported surface type: ${surface.surfaceType}`);
                 continue;
@@ -68,23 +68,30 @@ export default
             const indices = [];
             const colours = [];
             const st = [];
+            if (surface.numIndices % 3 !== 0) {
+                console.warn(`Number of indices not a multiple of 3: ${surface.numIndices}`);
+            }
             for (let idx = 0; idx < surface.numIndices; idx++) {
                 // TODO: this duplicates vertices
                 const vertexIndex = this.bspObject.drawIndices[surface.firstIndex + idx];
                 const vertex = this.bspObject.drawVerts[surface.firstVert + vertexIndex];
                 indices.push(idx);
-                vertices.push(vertex.xyz.x, vertex.xyz.y, vertex.xyz.z);
+
+                /*
+                    Q3:
+                        X-axis: positive X is to the right.
+                        Y-axis: positive Y is into the screen.
+                        Z-axis: positive Z is up.
+
+                    Three.js:
+                        X-axis: positive X is to the right.
+                        Y-axis: positive Y is up.
+                        Z-axis: positive Z is out of the screen.
+
+                */
+                vertices.push(vertex.xyz.x, vertex.xyz.z, -vertex.xyz.y);
                 colours.push(vertex.colour[0] / 255, vertex.colour[1] / 255, vertex.colour[2] / 255);
-                let u = vertex.st[0];
-                let v = vertex.st[1];/*
-                if (u > 1){
-                    u -= Math.floor(u);
-                }
-                if (v < -1){
-                    v = v - Math.floor(v);
-                }
-                v = 1 - v;*/
-                st.push(u, v);
+                st.push(vertex.st[0], vertex.st[1]);
             }
             geometry.setIndex(indices);
 
@@ -104,7 +111,7 @@ export default
             } else {
                 const material = new THREE.MeshBasicMaterial({
                     map: texture,
-                    //vertexColors: true,
+                    vertexColors: true,
                     side: THREE.DoubleSide
                 });
 
