@@ -20,6 +20,7 @@ const func = async () => {
   //bspObject = await bsp.load('potears3');
   bspObject = await bsp.load('pandemonium');
   //bspObject = await bsp.load('gvillage');
+  //bspObject = await bsp.load('keep');
   const bspRenderer = new BspRenderer(bspObject);
   scene = await bspRenderer.convertToScene();
 

@@ -46,11 +46,100 @@ export default
                 texture.wrapT = THREE.RepeatWrapping;
                 this.textures.push(texture);
             } catch (e) {
-                console.log(e)
+                console.log(e);
                 console.log(`Failed to load ${shader.shader}`);
                 this.textures.push(null);
             }
         }
+    }
+
+    getPlanarGeometry(surface) {
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        const indices = [];
+        const colours = [];
+        const st = [];
+        if (surface.numIndices % 3 !== 0) {
+            console.warn(`Number of indices not a multiple of 3: ${surface.numIndices}`);
+        }
+        for (let idx = 0; idx < surface.numIndices; idx++) {
+            // TODO: this duplicates vertices
+            const vertexIndex = this.bspObject.drawIndices[surface.firstIndex + idx];
+            const vertex = this.bspObject.drawVerts[surface.firstVert + vertexIndex];
+            indices.push(idx);
+
+            /*
+                Q3:
+                    X-axis: positive X is to the right.
+                    Y-axis: positive Y is into the screen.
+                    Z-axis: positive Z is up.
+
+                Three.js:
+                    X-axis: positive X is to the right.
+                    Y-axis: positive Y is up.
+                    Z-axis: positive Z is out of the screen.
+
+            */
+            vertices.push(vertex.xyz.x, vertex.xyz.z, -vertex.xyz.y);
+            colours.push(vertex.colour[0] / 255, vertex.colour[1] / 255, vertex.colour[2] / 255);
+            st.push(vertex.st[0], vertex.st[1]);
+        }
+        geometry.setIndex(indices);
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colours), 3));
+        geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(st), 2));
+        return geometry;
+    }
+
+    getPatchGeometry(surface) {
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        const indices = [];
+        const colours = [];
+        const st = [];
+
+        const numPoints = surface.patchWidth * surface.patchHeight;
+        for (let idx = 0; idx < numPoints; idx++) {
+            const vertex = this.bspObject.drawVerts[surface.firstVert + idx];
+
+            /*
+                Q3:
+                    X-axis: positive X is to the right.
+                    Y-axis: positive Y is into the screen.
+                    Z-axis: positive Z is up.
+
+                Three.js:
+                    X-axis: positive X is to the right.
+                    Y-axis: positive Y is up.
+                    Z-axis: positive Z is out of the screen.
+
+            */
+            vertices.push(vertex.xyz.x, vertex.xyz.z, -vertex.xyz.y);
+            colours.push(vertex.colour[0] / 255, vertex.colour[1] / 255, vertex.colour[2] / 255);
+            st.push(vertex.st[0], vertex.st[1]);
+        }
+
+        // Naive triangulation. TODO: subdivide based on bezier curves.
+        for (let y = 0; y < surface.patchHeight - 1; ++y) {
+            const idxy0 = y * surface.patchWidth;
+            for (let x = 0; x < surface.patchWidth - 1; ++x) {
+                indices.push(idxy0 + x);
+                indices.push(idxy0 + x + 1);
+                indices.push(idxy0 + x + 1 + surface.patchWidth);
+
+                indices.push(idxy0 + x);
+                indices.push(idxy0 + x + 1 + surface.patchWidth);
+                indices.push(idxy0 + x + surface.patchWidth);
+            }
+        }
+
+        geometry.setIndex(indices);
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colours), 3));
+        geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(st), 2));
+        return geometry;
     }
 
     async convertToScene(renderWireframe = false) {
@@ -59,45 +148,17 @@ export default
         const scene = new THREE.Scene();
 
         for (const surface of this.bspObject.surfaces) {
-            if (surface.surfaceType !== SurfaceType.MST_PLANAR) {
+            let geometry = null;
+            if (surface.surfaceType === SurfaceType.MST_PLANAR) {
+                geometry = this.getPlanarGeometry(surface);
+            } else if (surface.surfaceType === SurfaceType.MST_PATCH) {
+                geometry = this.getPatchGeometry(surface);
+            }
+
+            if (!geometry) {
                 console.warn(`Unsupported surface type: ${surface.surfaceType}`);
                 continue;
             }
-            const geometry = new THREE.BufferGeometry();
-            const vertices = [];
-            const indices = [];
-            const colours = [];
-            const st = [];
-            if (surface.numIndices % 3 !== 0) {
-                console.warn(`Number of indices not a multiple of 3: ${surface.numIndices}`);
-            }
-            for (let idx = 0; idx < surface.numIndices; idx++) {
-                // TODO: this duplicates vertices
-                const vertexIndex = this.bspObject.drawIndices[surface.firstIndex + idx];
-                const vertex = this.bspObject.drawVerts[surface.firstVert + vertexIndex];
-                indices.push(idx);
-
-                /*
-                    Q3:
-                        X-axis: positive X is to the right.
-                        Y-axis: positive Y is into the screen.
-                        Z-axis: positive Z is up.
-
-                    Three.js:
-                        X-axis: positive X is to the right.
-                        Y-axis: positive Y is up.
-                        Z-axis: positive Z is out of the screen.
-
-                */
-                vertices.push(vertex.xyz.x, vertex.xyz.z, -vertex.xyz.y);
-                colours.push(vertex.colour[0] / 255, vertex.colour[1] / 255, vertex.colour[2] / 255);
-                st.push(vertex.st[0], vertex.st[1]);
-            }
-            geometry.setIndex(indices);
-
-            geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
-            geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colours), 3));
-            geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(st), 2));
 
             const texture = this.textures[surface.shaderNum];
             //console.log(texture)
