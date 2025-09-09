@@ -107,7 +107,7 @@ class CameraControls extends Controls {
 
 		// event listeners
 
-		this._onMouseMove = onMouseMove.bind( this );
+		//this._onMouseMove = onMouseMove.bind( this );
 		this._onPointerlockChange = onPointerlockChange.bind( this );
 		this._onPointerlockError = onPointerlockError.bind( this );
 
@@ -123,7 +123,7 @@ class CameraControls extends Controls {
 
 		super.connect( element );
 
-		this.domElement.ownerDocument.addEventListener( 'mousemove', this._onMouseMove );
+		//this.domElement.ownerDocument.addEventListener( 'mousemove', this._onMouseMove );
 		this.domElement.ownerDocument.addEventListener( 'pointerlockchange', this._onPointerlockChange );
 		this.domElement.ownerDocument.addEventListener( 'pointerlockerror', this._onPointerlockError );
 
@@ -131,7 +131,7 @@ class CameraControls extends Controls {
 
 	disconnect() {
 
-		this.domElement.ownerDocument.removeEventListener( 'mousemove', this._onMouseMove );
+		//this.domElement.ownerDocument.removeEventListener( 'mousemove', this._onMouseMove );
 		this.domElement.ownerDocument.removeEventListener( 'pointerlockchange', this._onPointerlockChange );
 		this.domElement.ownerDocument.removeEventListener( 'pointerlockerror', this._onPointerlockError );
 
@@ -220,11 +220,7 @@ class CameraControls extends Controls {
 
 	}
 
-}
-
-// event listeners
-
-function onMouseMove( event ) {
+	onMouseMove( event ) {
 
 	if ( this.enabled === false || this.isLocked === false ) return;
 
@@ -241,6 +237,11 @@ function onMouseMove( event ) {
 	this.dispatchEvent( _changeEvent );
 
 }
+}
+
+// event listeners
+
+
 
 function onPointerlockChange() {
 

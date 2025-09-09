@@ -16,11 +16,15 @@ const camera = new THREE.PerspectiveCamera(70, width / height, 1, 50000);
 
 
 const func = async () => {
-  // potears3 is the smallest bsp file
-  //bspObject = await bsp.load('potears3');
-  bspObject = await bsp.load('pandemonium');
-  //bspObject = await bsp.load('gvillage');
+
+  //bspObject = await bsp.load('pandemonium');
+  bspObject = await bsp.load('gvillage');
+
+  //bspObject = await bsp.load('fortress1');
+  //bspObject = await bsp.load('fortress2');
+
   //bspObject = await bsp.load('keep');
+  //bspObject = await bsp.load('potears3');
   const bspRenderer = new BspRenderer(bspObject);
   scene = await bspRenderer.convertToScene();
 
@@ -31,9 +35,9 @@ const func = async () => {
   console.log(InfoPlayerStart.angle);
 
   // angle is 270, need to rotate to 180
-
-  camera.rotateY(THREE.MathUtils.degToRad(InfoPlayerStart.angle - 90));
-
+  if (InfoPlayerStart.angle) {
+    camera.rotateY(THREE.MathUtils.degToRad(InfoPlayerStart.angle - 90));
+  }
   camera.position.set(InfoPlayerStart.origin[0], InfoPlayerStart.origin[2] + 70, -InfoPlayerStart.origin[1]);
 };
 
@@ -73,7 +77,7 @@ const onKeyDown = function (event) {
 
     case 'KeyR':
       moveUp = true;
-      break; 
+      break;
     case 'KeyF':
       moveDown = true;
       break;
@@ -106,7 +110,7 @@ const onKeyUp = function (event) {
       break;
     case 'KeyR':
       moveUp = false;
-      break; 
+      break;
     case 'KeyF':
       moveDown = false;
       break;
@@ -116,6 +120,16 @@ const onKeyUp = function (event) {
 
 document.addEventListener('keydown', onKeyDown);
 document.addEventListener('keyup', onKeyUp);
+
+document.addEventListener('mousemove', onPointerMove);
+
+const pointer = new THREE.Vector2();
+function onPointerMove(event) {
+
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+  controls.onMouseMove(event);
+}
 
 document.addEventListener('click', function () {
   controls.lock();
@@ -138,11 +152,18 @@ let moveRight = false;
 let moveUp = false;
 let moveDown = false;
 
+let pickedObject = null;
+let raycaster = new THREE.Raycaster();
+
 const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
 let prevTime = performance.now();
 // animation
 function animate() {
+  if (!scene){
+    return;
+  }
+
   const time = performance.now();
   if (controls.isLocked === true) {
     const delta = (time - prevTime) / 1000;
@@ -160,10 +181,27 @@ function animate() {
     controls.moveRight(- velocity.x * delta);
     controls.moveForward(- velocity.z * delta);
 
-    if (moveUp) controls.object.position.y += ( 400.0 * delta );
-    if (moveDown) controls.object.position.y -= ( 400.0 * delta );
+    if (moveUp) controls.object.position.y += (400.0 * delta);
+    if (moveDown) controls.object.position.y -= (400.0 * delta);
+  } else {
+    
+    raycaster.setFromCamera( pointer, camera );
+    const intersects = raycaster.intersectObjects( scene.children, false );
 
+		if ( intersects.length > 0 ) {
+      const intersect = intersects[ 0 ];
+      if ( pickedObject != intersect.object ) {
 
+        if ( pickedObject ) pickedObject.material.wireframe = false;
+
+        pickedObject = intersect.object;
+       pickedObject.material.wireframe = true;
+
+        console.log(intersect);
+      }
+
+    }
+      
   }
   if (scene) {
     prevTime = time;
