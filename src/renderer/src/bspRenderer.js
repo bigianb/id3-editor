@@ -174,7 +174,7 @@ export default
 
         for (const surface of this.bspObject.surfaces) {
             let geometry = null;
-            if (surface.surfaceType === SurfaceType.MST_PLANAR) {
+            if (surface.surfaceType === SurfaceType.MST_PLANAR || surface.surfaceType === SurfaceType.MST_TRIANGLE_SOUP) {
                 geometry = this.getPlanarGeometry(surface);
             } else if (surface.surfaceType === SurfaceType.MST_PATCH) {
                 geometry = this.getPatchGeometry(surface);
