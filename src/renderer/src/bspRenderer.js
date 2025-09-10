@@ -28,7 +28,16 @@ export default
         for (const shader of this.bspObject.shaders) {
             // FIXME: assumes Alice
             try {
-                const fileData = await basefs.load(shader.shader + '.ftx');
+                // Hack name until we read the actual shader files
+                let ftxName = shader.shader + '.ftx';
+                if (shader.shader === 'textures/effects/starshootertube'){
+                    ftxName = 'textures/effects/starfield_01.ftx';
+                } else if (shader.shader === 'textures/liquid/tower2'){
+                    ftxName = 'textures/liquid/wtr_test2.ftx';
+                } else if (shader.shader === 'textures/skin/flehblobber'){
+                    ftxName = 'textures/skin/innergoop.ftx';
+                }
+                const fileData = await basefs.load(ftxName);
 
                 // fileData is a Uint8Array
                 const dv = new DataView(fileData.buffer);
@@ -177,6 +186,10 @@ export default
                 });
 
                 const mesh = new THREE.Mesh(geometry, material);
+
+                mesh.userData['shader'] = this.bspObject.shaders[surface.shaderNum];
+                mesh.userData['surface'] = surface;
+
                 scene.add(mesh);
             }
         }

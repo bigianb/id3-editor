@@ -160,7 +160,7 @@ const direction = new THREE.Vector3();
 let prevTime = performance.now();
 // animation
 function animate() {
-  if (!scene){
+  if (!scene) {
     return;
   }
 
@@ -184,24 +184,25 @@ function animate() {
     if (moveUp) controls.object.position.y += (400.0 * delta);
     if (moveDown) controls.object.position.y -= (400.0 * delta);
   } else {
-    
-    raycaster.setFromCamera( pointer, camera );
-    const intersects = raycaster.intersectObjects( scene.children, false );
 
-		if ( intersects.length > 0 ) {
-      const intersect = intersects[ 0 ];
-      if ( pickedObject != intersect.object ) {
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(scene.children, false);
 
-        if ( pickedObject ) pickedObject.material.wireframe = false;
+    if (intersects.length > 0) {
+      const intersect = intersects[0];
+      if (pickedObject != intersect.object) {
+
+        //if (pickedObject) pickedObject.material.wireframe = false;
 
         pickedObject = intersect.object;
-       pickedObject.material.wireframe = true;
+        
+        //pickedObject.material.wireframe = true;
 
-        console.log(intersect);
+        console.log(pickedObject);
       }
 
     }
-      
+
   }
   if (scene) {
     prevTime = time;
