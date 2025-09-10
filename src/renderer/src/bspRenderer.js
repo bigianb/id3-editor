@@ -8,6 +8,24 @@ const SurfaceType = {
     MST_FLARE: 4
 };
 
+const shaderToTextureMap = {
+    'textures/effects/starshootertube': 'textures/effects/starfield_01.ftx',
+    'textures/effects/starshooterback': 'textures/effects/swirlie_01.ftx',
+    'textures/liquid/tower2': 'textures/liquid/wtr_test2.ftx',
+    'textures/skin/flehblobber': 'textures/skin/innergoop.ftx',
+    'textures/liquid/testwater2': 'textures/liquid/wtr_test2.ftx',
+    'textures/effects/alicewall': 'textures/effects/alicewall_04.ftx',
+    'textures/effects/alicewalltrim': 'textures/common/black.ftx',
+    'textures/sky/km_testsky': 'textures/common/sky.ftx',
+    'textures/special/km_flame': 'textures/special/flame1.ftx',
+    'textures/common/blackfogup': 'textures/common/fog.ftx',
+    'textures/wall/sch_window1': 'textures/wall/sch_wndw2_1.ftx',
+    'textures/wall/sch_wndw_sm5': 'textures/wall/sch_wndw_small5_1.ftx',
+    'textures/glass/rnd_frms2light': 'textures/glass/rnd_frms2.ftx',
+
+    'textures/notexture': 'textures/common/caulk.ftx'
+}
+
 export default
     class BspRenderer {
     constructor(bspObject) {
@@ -29,13 +47,11 @@ export default
             // FIXME: assumes Alice
             try {
                 // Hack name until we read the actual shader files
-                let ftxName = shader.shader + '.ftx';
-                if (shader.shader === 'textures/effects/starshootertube'){
-                    ftxName = 'textures/effects/starfield_01.ftx';
-                } else if (shader.shader === 'textures/liquid/tower2'){
-                    ftxName = 'textures/liquid/wtr_test2.ftx';
-                } else if (shader.shader === 'textures/skin/flehblobber'){
-                    ftxName = 'textures/skin/innergoop.ftx';
+                let ftxName = shaderToTextureMap[shader.shader] ?? shader.shader + '.ftx';
+                if (ftxName === '.ftx'){
+                    console.log('Bad Shader, using Caulk image');
+                    console.log(shader);
+                    ftxName = 'textures/common/caulk.ftx';
                 }
                 const fileData = await basefs.load(ftxName);
 
