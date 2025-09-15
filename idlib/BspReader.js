@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import FileSystem from 'FileSystem.js';
 
 const AliceLumpIDs = {
     SHADERS: 0,
@@ -25,8 +26,8 @@ const AliceLumpIDs = {
 };
 
 export default class BspReader {
-    constructor(basePath) {
-        this.basePath = basePath;
+    constructor(fileSystem) {
+        this.fileSystem = fileSystem;
     }
 
     async load(bspName) {

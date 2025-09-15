@@ -17,6 +17,9 @@
     "vite-plugin-solid": "^2.11.8"
   },
   "dependencies": {
-    "three": "^0.179.1"
+    "@zip.js/zip.js": "^2.8.2",
+    "three": "^0.179.1",
+    "unzipper": "^0.12.3",
+    "yargs": "^18.0.0"
   }
 }

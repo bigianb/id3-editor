@@ -1,9 +1,20 @@
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
+
 import { app, BrowserWindow, ipcMain } from 'electron/main';
 import path from 'node:path';
 import fs from 'fs';
 import BspReader from '../../idlib/BspReader.js';
+import FileSystem from '../../idlib/FileSystem.js';
+
+const argv = yargs(hideBin(process.argv)).parse()
 
 let basePath = path.join(__dirname, '..', '..', 'alice-data');
+
+console.log('argv', argv);
+if (argv['fs_game']) {
+  basePath = argv['fs_game'];
+}
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
@@ -28,10 +39,13 @@ const createWindow = () => {
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 };
 
-app.whenReady().then(() => {
+const fileSystem = new FileSystem(basePath);
+
+app.whenReady().then(async() => {
+  await fileSystem.register(['pak0.pk3', 'pak1_large.pk3', 'pak2.pk3', 'pak3.pk3', 'pak4_english.pk3', 'pak5_mod.pk3']);
   ipcMain.handle('bsp-load', async (event, bspName) => {
     // Handle the request to load a BSP file
-    const bsp = await new BspReader(basePath).load(bspName);
+    const bsp = await new BspReader(fileSystem).load(bspName);
 
     // Useful for development
     fs.writeFileSync(bspName + '.bsp.json', JSON.stringify(bsp, undefined, 2));
