@@ -45,7 +45,7 @@ app.whenReady().then(async() => {
   await fileSystem.register(['pak0.pk3', 'pak1_large.pk3', 'pak2.pk3', 'pak3.pk3', 'pak4_english.pk3', 'pak5_mod.pk3']);
   ipcMain.handle('bsp-load', async (event, bspName) => {
     // Handle the request to load a BSP file
-    const bsp = await new BspReader(fileSystem).load(bspName);
+    const bsp = await new BspReader(fileSystem).load('maps/'+bspName+'.bsp');
 
     // Useful for development
     fs.writeFileSync(bspName + '.bsp.json', JSON.stringify(bsp, undefined, 2));
@@ -54,8 +54,7 @@ app.whenReady().then(async() => {
 
   ipcMain.handle('file-load', async (event, fileName) => {
     // Handle the request to load a file from the game fs
-
-    const fileContents = await fs.promises.readFile(path.join(basePath, fileName));
+    const fileContents = await fileSystem.readFile(fileName);
     return fileContents;
   });
 

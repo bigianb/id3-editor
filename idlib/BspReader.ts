@@ -1,6 +1,4 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import FileSystem from 'FileSystem.js';
+import FileSystem from './FileSystem.ts';
 
 const AliceLumpIDs = {
     SHADERS: 0,
@@ -25,20 +23,46 @@ const AliceLumpIDs = {
     LIGHTDEFS: 19
 };
 
+type BSPEntity = {
+    [key: string]: number | string | number[] | undefined
+}
+
+type BSPShader = {
+    shader: string,
+    surfaceFlags: number,
+    contentFlags: number,
+    subdivisions: number
+}
+
+type BSPDirectory = {
+    offset: number,
+    length: number
+}
+
+type BSPHeader = {
+    magic: string,
+    version: number,
+    checksum?: number,
+    directories: BSPDirectory[]
+}
+
 export default class BspReader {
-    constructor(fileSystem) {
+    fileSystem: FileSystem;
+    constructor(fileSystem: FileSystem) {
         this.fileSystem = fileSystem;
     }
 
-    async load(bspName) {
+    async load(bspName: string) {
         // Load the BSP file and parse it
-        console.log('loading BSP:', bspName, ' from ', this.basePath);
-        const filePath = path.join(this.basePath, 'maps', `${bspName}.bsp`);
-        const data = await readFile(filePath);
+        console.log('loading BSP:', bspName);
+        const data = await this.fileSystem.readFile(bspName);
+        if (!data) {
+            return undefined;
+        }
         return this.parseBsp(data);
     }
 
-    parseBsp(data) {
+    parseBsp(data: Buffer<ArrayBufferLike>) {
         // Parse the BSP data
         const dv = new DataView(data.buffer);
         const header = this.readBSPHeader(dv);
@@ -49,7 +73,7 @@ export default class BspReader {
         return { header };
     }
 
-    parseAliceBsp(header, dv) {
+    parseAliceBsp(header: { magic?: string; version?: any; directories: any; }, dv: DataView<ArrayBufferLike>) {
         // Parse the Alice BSP data
 
         // Used for Drawing
@@ -83,12 +107,12 @@ export default class BspReader {
         };
     }
 
-    isAlice(header) {
+    isAlice(header: BSPHeader) {
         return header.magic === 'FAKK' && header.version === 42;
     }
 
-    readBSPHeader(dv) {
-        const header = {
+    readBSPHeader(dv: DataView<ArrayBufferLike>) {
+        const header: BSPHeader = {
             magic: String.fromCharCode(
                 dv.getUint8(0),
                 dv.getUint8(1),
@@ -117,7 +141,7 @@ export default class BspReader {
         return header;
     }
 
-    readUint32ArrayLump(dv, directory) {
+    readUint32ArrayLump(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const values = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -127,38 +151,37 @@ export default class BspReader {
         return values;
     }
 
-    readEntities(dv, directory) {
+    readEntities(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const str = this.readStringLump(dv, directory);
         const elements = str.replaceAll("}", "").split("{");
         const entities = [];
         for (const el of elements) {
             let trimmed = el.trim();
-            if (trimmed.length > 0) {       
+            if (trimmed.length > 0) {
                 entities.push(this.parseEntity(trimmed));
             }
         }
         return entities;
     }
 
-    parseFloatArray(str)
-    {
+    parseFloatArray(str: string) {
         return str.split(' ').map(x => Number.parseFloat(x));
     }
 
-    parseEntity(strRep) {
-        const entity = {};
+    parseEntity(strRep: string) {
+        const entity: BSPEntity = {};
 
         const lines = strRep.split('\n');
-        for (const line of lines){
+        for (const line of lines) {
             const kv = line.split('" "').map(x => x.replaceAll('"', ''));
-            if (kv.length != 2){
+            if (kv.length != 2) {
                 console.error(`Failed to parse entity entry ${line}. Entity is:\n {${strRep}}`);
             } else {
                 const key = kv[0];
-                let val = kv[1];
-                if (key === 'origin' || key === '_color' || key === 'angles'){
+                let val: number | string | number[] = kv[1];
+                if (key === 'origin' || key === '_color' || key === 'angles') {
                     val = this.parseFloatArray(val);
-                } else if (key === 'angle' || key === 'scale' || key === 'speed' || key === 'light'){
+                } else if (key === 'angle' || key === 'scale' || key === 'speed' || key === 'light') {
                     val = Number.parseFloat(val);
                 }
                 entity[key] = val;
@@ -168,8 +191,8 @@ export default class BspReader {
         return entity;
     }
 
-    readVisibility(dv, directory) {
-        const vis = {
+    readVisibility(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+        const vis: { numClusters: number, clusterBytes: number, vis: number[] } = {
             numClusters: 0,
             clusterBytes: 0,
             vis: []
@@ -187,8 +210,8 @@ export default class BspReader {
     }
 
     // I don't understand this but it appears to be all integers
-    readEntLightsVis(dv, directory) {
-        const obj = { len: 0, data: [] };
+    readEntLightsVis(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+        const obj: { len: number, data: number[] } = { len: 0, data: [] };
         const start = directory.offset;
         const end = start + directory.length;
         let i = start;
@@ -203,7 +226,7 @@ export default class BspReader {
     }
 
     // mapspherel_t
-    readEntLights(dv, directory) {
+    readEntLights(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -225,7 +248,7 @@ export default class BspReader {
         return objs;
     }
 
-    readLightDefs(dv, directory) {
+    readLightDefs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -249,7 +272,7 @@ export default class BspReader {
         return objs;
     }
 
-    readModels(dv, directory) {
+    readModels(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -276,7 +299,7 @@ export default class BspReader {
         return objs;
     }
 
-    readFogs(dv, directory) {
+    readFogs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -292,7 +315,7 @@ export default class BspReader {
         return objs;
     }
 
-    readBrushes(dv, directory) {
+    readBrushes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -308,7 +331,7 @@ export default class BspReader {
         return objs;
     }
 
-    readBrushSides(dv, directory) {
+    readBrushSides(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -323,7 +346,7 @@ export default class BspReader {
         return objs;
     }
 
-    readNodes(dv, directory) {
+    readNodes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const nodes = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -349,7 +372,7 @@ export default class BspReader {
         return nodes;
     }
 
-    readAliceLeafs(dv, directory) {
+    readAliceLeafs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const leafs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -376,7 +399,7 @@ export default class BspReader {
         return leafs;
     }
 
-    readAliceDrawVerts(dv, directory) {
+    readAliceDrawVerts(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const drawVerts = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -393,17 +416,17 @@ export default class BspReader {
                 ],
                 normal: this.readVec3(dv, i + 28),
                 colour: [
-                    dv.getUint8(i + 40, true),
-                    dv.getUint8(i + 41, true),
-                    dv.getUint8(i + 42, true),
-                    dv.getUint8(i + 43, true)
+                    dv.getUint8(i + 40),
+                    dv.getUint8(i + 41),
+                    dv.getUint8(i + 42),
+                    dv.getUint8(i + 43)
                 ]
             });
         }
         return drawVerts;
     }
 
-    readAliceSurfaces(dv, directory) {
+    readAliceSurfaces(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         const surfaces = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -435,7 +458,7 @@ export default class BspReader {
         return surfaces;
     }
 
-    readVec3(dv, offset) {
+    readVec3(dv: DataView<ArrayBufferLike>, offset: number) {
         return {
             x: dv.getFloat32(offset, true),
             y: dv.getFloat32(offset + 4, true),
@@ -443,7 +466,7 @@ export default class BspReader {
         };
     }
 
-    readAlicePlanes(dv, directory) {
+    readAlicePlanes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         let planes = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -460,42 +483,43 @@ export default class BspReader {
         return planes;
     }
 
-    readAliceShaders(dv, directory) {
-        let shaders = [];
+
+
+    readAliceShaders(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+        let shaders: BSPShader[] = [];
         const start = directory.offset;
         const end = start + directory.length;
         let i = start;
         while (i < end) {
-            let shader = { shader: this.readString(dv, i, 64) };
-            i += 64;
-            shader.surfaceFlags = dv.getUint32(i, true);
-            i += 4;
-            shader.contentFlags = dv.getUint32(i, true);
-            i += 4;
-            shader.subdivisions = dv.getUint32(i, true);
-            i += 4;
+            const shader: BSPShader = {
+                shader: this.readString(dv, i, 64),
+                surfaceFlags: dv.getUint32(i + 64, true),
+                contentFlags: dv.getUint32(i + 68, true),
+                subdivisions: dv.getUint32(i + 72, true)
+            };
             shaders.push(shader);
+            i += 76;
         }
         return shaders;
     }
 
-    readString(dv, start, length) {
+    readString(dv: DataView<ArrayBufferLike>, start: number, length: number) {
         let str = '';
         for (let i = 0; i < length; ++i) {
-            const charCode = dv.getUint8(start + i, true);
+            const charCode = dv.getUint8(start + i);
             if (charCode === 0) break; // Null-terminated
             str += String.fromCharCode(charCode);
         }
         return str;
     }
 
-    readStringLump(dv, directory) {
+    readStringLump(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
         let entities = '';
         const start = directory.offset;
         const end = start + directory.length;
         for (let i = start; i < end; ++i) {
             // Horribly inefficient but will do for now
-            entities += String.fromCharCode(dv.getUint8(i, true));
+            entities += String.fromCharCode(dv.getUint8(i));
         }
         return entities;
     }

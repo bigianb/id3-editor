@@ -61,15 +61,19 @@ export default
                 const height = dv.getUint32(4, true);
                 const hasAlpha = dv.getUint32(8, true);
 
-                console.log(`${shader.shader}, width=${width}, height=${height}, hasAlpha=${hasAlpha}`);
-                const imageData = fileData.slice(12);
-                const texture = new THREE.DataTexture(imageData, width, height);
-                texture.colorSpace = THREE.SRGBColorSpace;
-                texture.needsUpdate = true;
-                texture.flipY = false;
-                texture.wrapS = THREE.RepeatWrapping;
-                texture.wrapT = THREE.RepeatWrapping;
-                this.textures.push(texture);
+                if (width > 5000 || height > 5000){
+                    console.error(`Bad Image!: ${shader.shader}, width=${width}, height=${height}, hasAlpha=${hasAlpha}`);
+                    this.textures.push(texture);
+                } else {
+                    const imageData = fileData.slice(12);
+                    const texture = new THREE.DataTexture(imageData, width, height);
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    texture.needsUpdate = true;
+                    texture.flipY = false;
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    this.textures.push(texture);
+                }
             } catch (e) {
                 console.log(e);
                 console.log(`Failed to load ${shader.shader}`);
