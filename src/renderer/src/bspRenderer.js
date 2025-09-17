@@ -24,7 +24,7 @@ const shaderToTextureMap = {
     'textures/glass/rnd_frms2light': 'textures/glass/rnd_frms2.ftx',
 
     'textures/notexture': 'textures/common/caulk.ftx'
-}
+};
 
 export default
     class BspRenderer {
@@ -48,7 +48,7 @@ export default
             try {
                 // Hack name until we read the actual shader files
                 let ftxName = shaderToTextureMap[shader.shader] ?? shader.shader + '.ftx';
-                if (ftxName === '.ftx'){
+                if (ftxName === '.ftx') {
                     console.log('Bad Shader, using Caulk image');
                     console.log(shader);
                     ftxName = 'textures/common/caulk.ftx';
@@ -61,7 +61,7 @@ export default
                 const height = dv.getUint32(4, true);
                 const hasAlpha = dv.getUint32(8, true);
 
-                if (width > 5000 || height > 5000){
+                if (width > 5000 || height > 5000) {
                     // Should never happen
                     console.error(`Bad Image!: ${shader.shader}, width=${width}, height=${height}, hasAlpha=${hasAlpha}`);
                     console.log(fileData);
@@ -177,6 +177,7 @@ export default
     async convertToScene(renderWireframe = false) {
         await this.loadTextures();
 
+        const textureToMaterialMap = new Map();
         const scene = new THREE.Scene();
 
         for (const surface of this.bspObject.surfaces) {
@@ -202,18 +203,46 @@ export default
                 line.material.transparent = true;
                 scene.add(line);
             } else {
-                const material = new THREE.MeshBasicMaterial({
-                    map: texture,
-                    vertexColors: true,
-                    side: THREE.DoubleSide
-                });
-
+                let material = textureToMaterialMap.get(texture);
+                if (!material) {
+                    material = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        vertexColors: true,
+                        side: THREE.DoubleSide
+                    });
+                    textureToMaterialMap.set(texture, material);
+                }
                 const mesh = new THREE.Mesh(geometry, material);
 
                 mesh.userData['shader'] = this.bspObject.shaders[surface.shaderNum];
                 mesh.userData['surface'] = surface;
 
                 scene.add(mesh);
+            }
+        }
+
+        for (const entity of this.bspObject.entities) {
+            const posVal = entity.origin;
+            if (posVal) {
+                if (entity.classname === 'light') {
+                    const geometry = new THREE.SphereGeometry(10.0);
+                    const material = new THREE.MeshBasicMaterial({ color: 0xf0f0f0 });
+                    const cube = new THREE.Mesh(geometry, material);
+
+                    cube.position.x = posVal[0];
+                    cube.position.y = posVal[2];
+                    cube.position.z = -posVal[1];
+                    scene.add(cube);
+                } else {
+                    const geometry = new THREE.BoxGeometry(10.0, 10.0, 10.0);
+                    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                    const cube = new THREE.Mesh(geometry, material);
+
+                    cube.position.x = posVal[0];
+                    cube.position.y = posVal[2];
+                    cube.position.z = -posVal[1];
+                    scene.add(cube);
+                }
             }
         }
 

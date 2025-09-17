@@ -16,6 +16,8 @@ if (argv['fs_game']) {
   basePath = argv['fs_game'];
 }
 
+app.commandLine.appendSwitch('disable-frame-rate-limit');
+
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 800,

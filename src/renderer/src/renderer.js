@@ -1,19 +1,13 @@
 import * as THREE from 'three';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { CameraControls } from './cameraControls.js';
 import BspRenderer from './bspRenderer.js';
 
-// see https://github.com/mrdoob/three.js/blob/master/examples/misc_controls_pointerlock.html for better first person controls
-
-//const information = document.getElementById('info');
-//information.innerText = `This app is using Chrome (v${versions.chrome()}), Node.js (v${versions.node()}), and Electron (v${versions.electron()})`;
-
 let scene = null;
-
 let bspObject = null;
 
 const width = window.innerWidth, height = window.innerHeight;
 const camera = new THREE.PerspectiveCamera(70, width / height, 1, 50000);
-
 
 const func = async () => {
 
@@ -43,11 +37,20 @@ const func = async () => {
 
 func();
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.sync = false;
+renderer.physicallyCorrectLights = false;
+renderer.powerPreference = 'high-performance';
+
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(width, height);
 renderer.setAnimationLoop(animate);
-document.body.appendChild(renderer.domElement);
+
+const stats = new Stats();
+
+const container = document.getElementById('container');
+container.appendChild(stats.dom);
+container.appendChild(renderer.domElement);
 
 const controls = new CameraControls(camera, renderer.domElement);
 
@@ -80,6 +83,10 @@ const onKeyDown = function (event) {
       break;
     case 'KeyF':
       moveDown = true;
+      break;
+
+    case 'KeyI':
+      console.log(renderer.info.render);
       break;
   }
 
@@ -195,17 +202,19 @@ function animate() {
         //if (pickedObject) pickedObject.material.wireframe = false;
 
         pickedObject = intersect.object;
-        
+
         //pickedObject.material.wireframe = true;
 
-        console.log(pickedObject);
+        //console.log(pickedObject);
       }
 
     }
 
   }
-  if (scene) {
-    prevTime = time;
-    renderer.render(scene, camera);
-  }
+
+  prevTime = time;
+  stats.update();
+
+  renderer.render(scene, camera);
+
 }

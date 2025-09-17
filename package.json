@@ -9,15 +9,18 @@
   "scripts": {
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
-    "prebuild": "electron-vite build"
+    "build": "electron-vite build",
+    "build:win": "npm run build && electron-builder --win --config",
+    "build:mac": "npm run build && electron-builder --mac --config",
+    "build:linux": "npm run build && electron-builder --linux --config"
   },
   "devDependencies": {
     "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
     "electron-vite": "^4.0.0",
     "vite-plugin-solid": "^2.11.8"
   },
   "dependencies": {
-    "@zip.js/zip.js": "^2.8.2",
     "three": "^0.179.1",
     "unzipper": "^0.12.3",
     "yargs": "^18.0.0"
