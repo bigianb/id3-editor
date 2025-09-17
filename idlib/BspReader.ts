@@ -64,7 +64,7 @@ export default class BspReader {
 
     parseBsp(data: Buffer<ArrayBufferLike>) {
         // Parse the BSP data
-        const dv = new DataView(data.buffer);
+        const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
         const header = this.readBSPHeader(dv);
         //console.log(header)
         if (this.isAlice(header)) {

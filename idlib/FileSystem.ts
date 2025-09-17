@@ -34,8 +34,7 @@ export default class FileSystem {
             console.error('file ' + filename + ' not found');
             return undefined;
         }
-        const content = await file.buffer();
-        return content;
+        return await file.buffer();
     }
 
     async register(pk3Files: string[]) {

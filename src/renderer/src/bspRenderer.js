@@ -56,14 +56,17 @@ export default
                 const fileData = await basefs.load(ftxName);
 
                 // fileData is a Uint8Array
-                const dv = new DataView(fileData.buffer);
+                const dv = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
                 const width = dv.getUint32(0, true);
                 const height = dv.getUint32(4, true);
                 const hasAlpha = dv.getUint32(8, true);
 
                 if (width > 5000 || height > 5000){
+                    // Should never happen
                     console.error(`Bad Image!: ${shader.shader}, width=${width}, height=${height}, hasAlpha=${hasAlpha}`);
-                    this.textures.push(texture);
+                    console.log(fileData);
+                    console.log(dv);
+                    this.textures.push(null);
                 } else {
                     const imageData = fileData.slice(12);
                     const texture = new THREE.DataTexture(imageData, width, height);
