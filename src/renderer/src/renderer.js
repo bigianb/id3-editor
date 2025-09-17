@@ -199,19 +199,17 @@ function animate() {
       const intersect = intersects[0];
       if (pickedObject != intersect.object) {
 
-        //if (pickedObject) pickedObject.material.wireframe = false;
+        if (pickedObject) pickedObject.material.wireframe = false;
 
         pickedObject = intersect.object;
-
-        //pickedObject.material.wireframe = true;
-
-        //console.log(pickedObject);
+        if (pickedObject.userData['entity']) {
+          const entity = pickedObject.userData['entity'];
+          console.log(entity);
+          pickedObject.material.wireframe = true;
+        }
       }
-
     }
-
   }
-
   prevTime = time;
   stats.update();
 

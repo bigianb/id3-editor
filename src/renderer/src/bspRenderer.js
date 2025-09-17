@@ -26,6 +26,16 @@ const shaderToTextureMap = {
     'textures/notexture': 'textures/common/caulk.ftx'
 };
 
+const entityMaterials = {
+    'light': new THREE.MeshBasicMaterial({ color: 0xf0f0f0 }),
+    'info_player_start': new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
+    'info_pathnode': new THREE.MeshBasicMaterial({ color: 0x008080 }),
+    'script_model': new THREE.MeshBasicMaterial({ color: 0x0000ff }),
+    'script_object': new THREE.MeshBasicMaterial({ color: 0xff0000 }),
+    'func_camera': new THREE.MeshBasicMaterial({ color: 0xffff00 }),
+    'default': new THREE.MeshBasicMaterial({ color: 0x808080 })
+};
+
 export default
     class BspRenderer {
     constructor(bspObject) {
@@ -226,21 +236,26 @@ export default
             if (posVal) {
                 if (entity.classname === 'light') {
                     const geometry = new THREE.SphereGeometry(10.0);
-                    const material = new THREE.MeshBasicMaterial({ color: 0xf0f0f0 });
+                    const material = entityMaterials.light;
                     const cube = new THREE.Mesh(geometry, material);
 
                     cube.position.x = posVal[0];
                     cube.position.y = posVal[2];
                     cube.position.z = -posVal[1];
+
+                    cube.userData['entity'] = entity;
                     scene.add(cube);
                 } else {
                     const geometry = new THREE.BoxGeometry(10.0, 10.0, 10.0);
-                    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                    const material = entityMaterials[entity.classname] ?? entityMaterials['default'];
                     const cube = new THREE.Mesh(geometry, material);
 
                     cube.position.x = posVal[0];
                     cube.position.y = posVal[2];
                     cube.position.z = -posVal[1];
+
+                    cube.userData['entity'] = entity;
+
                     scene.add(cube);
                 }
             }
