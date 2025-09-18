@@ -19,8 +19,8 @@ export default class FileSystem {
     async readFile(filename: string) {
         const pk3File = this.filenameToPK3.get(filename);
         if (!pk3File){
-            console.error('pk3File ' + pk3File + ' not found');
-            console.log(this.filenameToPK3)
+            console.error('pk3File ' + pk3File + ' not found for file ' + filename);
+            //console.log(this.filenameToPK3)
             return undefined;
         }
         

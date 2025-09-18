@@ -67,7 +67,7 @@ export default class BspReader {
         const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
         const header = this.readBSPHeader(dv);
         //console.log(header)
-        if (this.isAlice(header)) {
+        if (this.isAlice(header) || this.isFAKK2(header)) {
             return this.parseAliceBsp(header, dv);
         }
         return { header };
@@ -111,6 +111,10 @@ export default class BspReader {
         return header.magic === 'FAKK' && header.version === 42;
     }
 
+    isFAKK2(header: BSPHeader) {
+        return header.magic === 'FAKK' && header.version === 12;
+    }
+
     readBSPHeader(dv: DataView<ArrayBufferLike>) {
         const header: BSPHeader = {
             magic: String.fromCharCode(
@@ -123,12 +127,13 @@ export default class BspReader {
             directories: []
         };
         let offset = 8;
+        console.log('BSP Header:', header);
         if (header.magic == 'FAKK') {
             header.checksum = dv.getUint32(offset, true);
             offset += 4;
         }
         let numDirs = 17;
-        if (this.isAlice(header)) {
+        if (this.isAlice(header) || this.isFAKK2(header)) {
             numDirs = 20;
         }
         for (let i = 0; i < numDirs; ++i) {

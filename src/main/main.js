@@ -44,7 +44,7 @@ const createWindow = () => {
 const fileSystem = new FileSystem(basePath);
 
 app.whenReady().then(async() => {
-  await fileSystem.register(['pak0.pk3', 'pak1_large.pk3', 'pak2.pk3', 'pak3.pk3', 'pak4_english.pk3', 'pak5_mod.pk3']);
+  await fileSystem.register(['pak0.pk3', 'pak1.pk3', 'pak1_large.pk3', 'pak2.pk3', 'pak3.pk3', 'pak4_english.pk3', 'pak5_mod.pk3']);
   ipcMain.handle('bsp-load', async (event, bspName) => {
     // Handle the request to load a BSP file
     const bsp = await new BspReader(fileSystem).load('maps/'+bspName+'.bsp');
