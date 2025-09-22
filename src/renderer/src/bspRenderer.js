@@ -43,6 +43,17 @@ export default
         this.textures = [];
     }
 
+    async loadShaders() {
+        
+        const shaders = await basefs.loadShaders();
+        if (!shaders) {
+            console.error('Failed to load shader list');
+            return;
+        }
+        console.log(shaders);
+        this.bspObject.xshaders = shaders;
+    }
+
     async loadTextures() {
         /* Shader looks like:
         {
@@ -52,6 +63,7 @@ export default
             "subdivisions": 0
         }   
         */
+       await this.loadShaders();
         this.textures = [];
         for (const shader of this.bspObject.shaders) {
             // FIXME: assumes Alice

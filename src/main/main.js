@@ -6,6 +6,7 @@ import path from 'node:path';
 import fs from 'fs';
 import BspReader from '../../idlib/BspReader.js';
 import FileSystem from '../../idlib/FileSystem.js';
+import ShaderReader from '../../idlib/ShaderReader.js';
 
 const argv = yargs(hideBin(process.argv)).parse()
 
@@ -58,6 +59,12 @@ app.whenReady().then(async() => {
     // Handle the request to load a file from the game fs
     const fileContents = await fileSystem.readFile(fileName);
     return fileContents;
+  });
+
+  ipcMain.handle('shaders-load', async (event, fileName) => {
+    const shaderReader = new ShaderReader(fileSystem);
+    const shaders = await shaderReader.loadAllShaders();
+    return shaders;
   });
 
   createWindow();

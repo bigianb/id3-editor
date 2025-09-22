@@ -4,6 +4,7 @@ import * as unzipper from 'unzipper';
 
 export default class FileSystem {
 
+
     filenameToPK3: Map<string, string>;
     basePath: string;
     
@@ -14,6 +15,16 @@ export default class FileSystem {
         this.basePath = basePath;
         this.filenameToPK3 = new Map();
         this.currentPK3 = {pk3name: '', directory: undefined}
+    }
+
+    findFiles(prefix: string, ext: string): string[] {
+        const results: string[] = [];
+        for (const [filename, pk3File] of this.filenameToPK3) {
+            if (filename.startsWith(prefix) && filename.endsWith(ext)) {
+                results.push(filename);
+            }
+        }
+        return results;
     }
 
     async readFile(filename: string) {

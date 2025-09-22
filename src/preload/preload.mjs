@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('bsp', {
 });
 
 contextBridge.exposeInMainWorld('basefs', {
-  load: (name) => ipcRenderer.invoke('file-load', name)
+  load: (name) => ipcRenderer.invoke('file-load', name),
+  loadShaders: () => ipcRenderer.invoke('shaders-load')
 });

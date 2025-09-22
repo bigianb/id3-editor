@@ -12,11 +12,11 @@ const camera = new THREE.PerspectiveCamera(70, width / height, 1, 50000);
 const func = async () => {
 
   // FAKK2
-  //bspObject = await bsp.load('fakkhouse');
+  bspObject = await bsp.load('fakkhouse');
 
   // Alice
   //bspObject = await bsp.load('gvillage');
-  bspObject = await bsp.load('pandemonium');
+  //bspObject = await bsp.load('pandemonium');
 
   //bspObject = await bsp.load('fortress1');
   //bspObject = await bsp.load('fortress2');
