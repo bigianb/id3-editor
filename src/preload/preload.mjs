@@ -9,6 +9,10 @@ contextBridge.exposeInMainWorld('versions', {
   // we can also expose variables, not just functions
 });
 
+contextBridge.exposeInMainWorld('game', {
+  config: () => ipcRenderer.invoke('game-config')
+});
+
 contextBridge.exposeInMainWorld('bsp', {
   load: (name) => ipcRenderer.invoke('bsp-load', name)
 });

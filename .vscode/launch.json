@@ -13,10 +13,7 @@
       "request": "launch",
       "runtimeArgs": [
         "run",
-        "start",
-        "--",
-        "--",
-        "--fs_game=/Users/ian/doom/Alice1/bin/base"
+        "start"
       ],
       "runtimeExecutable": "npm",
       "skipFiles": [

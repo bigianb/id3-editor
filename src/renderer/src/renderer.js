@@ -11,18 +11,9 @@ const camera = new THREE.PerspectiveCamera(70, width / height, 1, 50000);
 
 const func = async () => {
 
-  // FAKK2
-  bspObject = await bsp.load('fakkhouse');
+  const config = await game.config();
+  bspObject = await bsp.load(config.bspName);
 
-  // Alice
-  //bspObject = await bsp.load('gvillage');
-  //bspObject = await bsp.load('pandemonium');
-
-  //bspObject = await bsp.load('fortress1');
-  //bspObject = await bsp.load('fortress2');
-
-  //bspObject = await bsp.load('keep');
-  //bspObject = await bsp.load('potears3');
   const bspRenderer = new BspRenderer(bspObject);
   scene = await bspRenderer.convertToScene();
 

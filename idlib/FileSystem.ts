@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import path from 'node:path';
 import * as unzipper from 'unzipper';
 
