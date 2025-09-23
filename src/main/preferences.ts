@@ -6,6 +6,15 @@ export default class Preferences {
 
     preferences: Map<string, any> = new Map();
 
+    async fileExists(path: string): Promise<boolean> {
+        try {
+            const fsStat = await stat(path);
+            return fsStat.isFile();
+        } catch {
+            return false;
+        }
+    }
+
     /**
      * Reads preferences from the preferences.json file in the user data directory.
      */
@@ -13,8 +22,7 @@ export default class Preferences {
         const userData: string = app.getPath('userData');
         console.log('User data path: ' + userData);
         const prefPath = path.join(userData, 'preferences.json');
-        const fsStat = await stat(prefPath);
-        if (fsStat.isFile()) {
+        if (await this.fileExists(prefPath)) {
             const data = await readFile(prefPath, 'utf-8');
             this.preferences = new Map(Object.entries(JSON.parse(data)));
         } else {
@@ -30,7 +38,7 @@ export default class Preferences {
         const fsStat = await stat(userData);
         if (!fsStat.isDirectory()) {
             const dirCreation = await mkdir(userData, { recursive: true });
-            if (!dirCreation){
+            if (!dirCreation) {
                 throw new Error(`Could not create User data path ${userData}.`);
             }
         }
@@ -46,7 +54,7 @@ export default class Preferences {
     get(key: string): any | undefined {
         return this.preferences.get(key);
     }
-     
+
     set(key: string, value: any): void {
         this.preferences.set(key, value);
     }

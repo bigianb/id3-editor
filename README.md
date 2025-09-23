@@ -9,15 +9,18 @@ It's a fun puzzle. The aim is to better understand and potentially document the 
 # Quickstart
 
 * Requires NodeJS 24
-* Copy Alice pk3 files into a directory called alice-data at the repository root. You'll see this is in .gitignore so it will not appear in your git changed files. Alternatively use the fs_game command line to set the path to the pk3 files (`--fs_game="blah blah"`)
 * run `npm install` to install all the dependencies
 * run `npm run start` to start the viewer.
 
 To specify the game path you would use:
-```npm run start -- -- --fs_game=/foo/bar/path```
+
+```npm run start -- -- --fs_game=/foo/bar/path --game=alice --bsp=pandemonium```
+
 Note the two double dashes which are required to pass the command line parameter to the electron process.
 
-You need to edit renderer.js in order to specify the map name to load (there is a TODO to allow this to be specified on the command line)
+The `game` option can be one of: `rtcw`, `alice` or `fakk2`.
+
+The app will remember the options passed so the next time you can just use `npm run start`.
 
 If you use VSCode then there are some run targets to help debugging. You can also bring up the developer tools in the main window (ctrl+shit+i or option-command-i on a mac) because the main window is just an embedded chrome browser.
 
