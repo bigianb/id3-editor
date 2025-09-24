@@ -20,6 +20,9 @@ Note the two double dashes which are required to pass the command line parameter
 
 The `game` option can be one of: `rtcw`, `alice` or `fakk2`.
 
+For RTCW on a mac you would use:
+```npm run start -- -- --fs_game="/Users/ian/.wine/drive_c/GOG Games/Return to Castle Wolfenstein/Main" --game=rtcw --bsp=escape1```
+
 The app will remember the options passed so the next time you can just use `npm run start`.
 
 If you use VSCode then there are some run targets to help debugging. You can also bring up the developer tools in the main window (ctrl+shit+i or option-command-i on a mac) because the main window is just an embedded chrome browser.

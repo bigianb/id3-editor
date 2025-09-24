@@ -59,10 +59,22 @@ export default class ShaderReader {
                 shaders.set(currentShader.name, currentShader);
                 continue;
             }
-            if (line === '{') {
+            if (line.startsWith('{')) {
                 depth++;
+                if (depth === 3){
+                    // We see this in rtcw. It's a bad shader. A closing brace is commented out.
+                    // assume the last stage is done.
+                    depth = 2;
+                }
+                const rest = line.substring(1).trim();
+                if (depth === 1 && rest.length > 0) {
+                    currentShader.params.push(rest);
+                }
                 if (depth === 2) {
                     currentStage = [];
+                    if (rest.length > 0) {
+                        currentStage.push(rest);
+                    }
                     currentShader.stages.push(currentStage);
                 }
             } else if (line === '}') {

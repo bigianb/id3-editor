@@ -43,6 +43,67 @@ myShader
             expect(shader.stages[0]).toEqual(['stageParam1', 'stageParam2']);
         });
 
+        it('deals with bad rtcw shader', () => {
+            const shaderText = `
+myShader
+{
+    param1
+    param2
+    {
+        stageParam1
+        stageParam2
+        // blah }
+    {
+        stageParam3
+    }
+    param3
+}
+`;
+            const buffer = Buffer.from(shaderText, 'utf-8');
+            const result = shaderReader.parseShader(buffer);
+
+            expect(result).toBeInstanceOf(Map);
+            expect(result).not.toBeNull();
+            expect(result.has('myShader')).toBe(true);
+
+            const shader = result.get('myShader');
+            expect(shader.name).toBe('myShader');
+            expect(shader.params).toEqual(['param1', 'param2', 'param3']);
+            expect(shader.stages.length).toBe(2);
+            expect(shader.stages[0]).toEqual(['stageParam1', 'stageParam2']);
+            expect(shader.stages[1]).toEqual(['stageParam3']);
+        });
+
+        it('deals with rtcw shader where open brace is on the same line', () => {
+            const shaderText = `
+myShader
+{
+    param1
+    param2
+    { stageParam1
+        stageParam2
+    }
+    {
+        stageParam3
+    }
+    param3
+}
+`;
+            const buffer = Buffer.from(shaderText, 'utf-8');
+            const result = shaderReader.parseShader(buffer);
+
+            expect(result).toBeInstanceOf(Map);
+            expect(result).not.toBeNull();
+            expect(result.has('myShader')).toBe(true);
+
+            const shader = result.get('myShader');
+            expect(shader.name).toBe('myShader');
+            expect(shader.params).toEqual(['param1', 'param2', 'param3']);
+            expect(shader.stages.length).toBe(2);
+            expect(shader.stages[0]).toEqual(['stageParam1', 'stageParam2']);
+            expect(shader.stages[1]).toEqual(['stageParam3']);
+        });
+
         it('skips comments and empty lines', () => {
             const shaderText = `
 // This is a comment
