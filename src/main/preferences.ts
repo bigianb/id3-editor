@@ -1,4 +1,4 @@
-const { app } = require('electron')
+import { app } from 'electron';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
