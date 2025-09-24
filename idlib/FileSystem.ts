@@ -1,6 +1,5 @@
 import path from 'node:path';
 import * as unzipper from 'unzipper';
-import { CentralDirectory } from 'unzipper';
 
 export default class FileSystem {
 
@@ -8,7 +7,7 @@ export default class FileSystem {
     filenameToPK3: Map<string, string>;
     basePath: string;
 
-    currentPK3: {pk3name: string, directory: CentralDirectory | undefined};
+    currentPK3: {pk3name: string, directory: unzipper.CentralDirectory | undefined};
 
     constructor(basePath: string) {
         this.basePath = basePath;
