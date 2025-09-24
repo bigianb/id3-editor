@@ -32,7 +32,12 @@ export default class ShaderReader {
         if (!data) {
             return undefined;
         }
-        return this.parseShader(data);
+        const shader = this.parseShader(data);
+        if (!shader) {
+            console.warn('Failed to parse shader file:', shaderName);
+            return undefined;
+        }
+        return shader;
     }
 
     parseShader(data: Buffer) {
@@ -50,7 +55,7 @@ export default class ShaderReader {
                 continue; // Skip comments and empty lines
             }
             if (!currentShader) {
-                currentShader = { name: line, stages: [] };
+                currentShader = { name: line, params: [], stages: [] };
                 shaders.set(currentShader.name, currentShader);
                 continue;
             }
@@ -68,13 +73,13 @@ export default class ShaderReader {
                     currentStage = null;
                 }
             } else if (depth === 1) {
-                const [key, ...rest] = line.split(' ');
-                const value = rest.join(' ');
-                currentShader[key] = value;
+                currentShader.params.push(line);
             } else if (depth === 2) {
                 currentStage.push(line);
             } else {
-                console.warn('Unexpected line outside of shader/stage:', line);
+                console.warn('Unexpected line depth '+depth+' outside of shader/stage:', line);
+
+                return null;
             }
         }
 
