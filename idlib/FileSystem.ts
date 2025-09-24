@@ -6,9 +6,8 @@ export default class FileSystem {
 
     filenameToPK3: Map<string, string>;
     basePath: string;
-    
-    // Cache the current open pk3 file.
-    currentPK3: {pk3name: string, directory: unzipper.CentralDirectory | undefined};
+
+    currentPK3: {pk3name: string, directory: {files: Array<{path: string, buffer: () => Promise<Buffer>}>} | undefined};
 
     constructor(basePath: string) {
         this.basePath = basePath;
@@ -26,7 +25,7 @@ export default class FileSystem {
         return results;
     }
 
-    async readFile(filename: string) {
+    async readFile(filename: string) : Promise<Buffer | undefined> {
         const pk3File = this.filenameToPK3.get(filename);
         if (!pk3File){
             console.error('pk3File ' + pk3File + ' not found for file ' + filename);
@@ -35,11 +34,11 @@ export default class FileSystem {
         }
         
         if (this.currentPK3.pk3name !== pk3File || !this.currentPK3.directory) {
-            this.currentPK3.directory = await unzipper.Open.file(pk3File);
+            this.currentPK3.directory = await unzipper.Open.file(pk3File) as { files: Array<{ path: string, buffer: () => Promise<Buffer> }> };
             this.currentPK3.pk3name = pk3File;
         }
         const directory = this.currentPK3.directory;
-        const file = directory.files.find(d => d.path === filename);
+        const file = directory?.files.find((d: { path: string }) => d.path === filename);
         if (!file){
             console.error('file ' + filename + ' not found');
             return undefined;
@@ -47,7 +46,7 @@ export default class FileSystem {
         return await file.buffer();
     }
 
-    async register(pk3Files: string[]) {
+    async register(pk3Files: string[]): Promise<void> {
         for (const pk3File of pk3Files) {
             try {
                 await this.addPK3(path.join(this.basePath, pk3File));
@@ -57,7 +56,7 @@ export default class FileSystem {
         }
     }
 
-    async addPK3(pk3Path: string) {
+    async addPK3(pk3Path: string): Promise<void> {
         const directory = await unzipper.Open.file(pk3Path);
         for (const file of directory.files) {
             this.filenameToPK3.set(file.path, pk3Path);
