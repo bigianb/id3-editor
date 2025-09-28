@@ -201,6 +201,8 @@ function animate() {
           const entity = pickedObject.userData['entity'];
           console.log(entity);
           pickedObject.material.wireframe = true;
+        } else {
+          console.log(pickedObject.userData);
         }
       }
     }

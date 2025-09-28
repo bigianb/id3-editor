@@ -8,24 +8,6 @@ const SurfaceType = {
     MST_FLARE: 4
 };
 
-const shaderToTextureMap = {
-    'textures/effects/starshootertube': 'textures/effects/starfield_01.ftx',
-    'textures/effects/starshooterback': 'textures/effects/swirlie_01.ftx',
-    'textures/liquid/tower2': 'textures/liquid/wtr_test2.ftx',
-    'textures/skin/flehblobber': 'textures/skin/innergoop.ftx',
-    'textures/liquid/testwater2': 'textures/liquid/wtr_test2.ftx',
-    'textures/effects/alicewall': 'textures/effects/alicewall_04.ftx',
-    'textures/effects/alicewalltrim': 'textures/common/black.ftx',
-    'textures/sky/km_testsky': 'textures/common/sky.ftx',
-    'textures/special/km_flame': 'textures/special/flame1.ftx',
-    'textures/common/blackfogup': 'textures/common/fog.ftx',
-    'textures/wall/sch_window1': 'textures/wall/sch_wndw2_1.ftx',
-    'textures/wall/sch_wndw_sm5': 'textures/wall/sch_wndw_small5_1.ftx',
-    'textures/glass/rnd_frms2light': 'textures/glass/rnd_frms2.ftx',
-
-    'textures/notexture': 'textures/common/caulk.ftx'
-};
-
 const entityMaterials = {
     'light': new THREE.MeshBasicMaterial({ color: 0xf0f0f0 }),
     'info_player_start': new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
@@ -36,6 +18,16 @@ const entityMaterials = {
     'default': new THREE.MeshBasicMaterial({ color: 0x808080 })
 };
 
+function findParam(shaderScript, paramName) {
+    for (const line of shaderScript.params) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2 && parts[0] === paramName) {
+            return parts[1];
+        }
+    }
+    return null;
+}
+
 export default
     class BspRenderer {
     constructor(bspObject) {
@@ -44,14 +36,14 @@ export default
     }
 
     async loadShaders() {
-        
+
         const shaders = await basefs.loadShaders();
         if (!shaders) {
             console.error('Failed to load shader list');
             return;
         }
         console.log(shaders);
-        this.bspObject.xshaders = shaders;
+        this.bspObject.shaderScripts = shaders;
     }
 
     async loadTextures() {
@@ -63,33 +55,47 @@ export default
             "subdivisions": 0
         }   
         */
-       await this.loadShaders();
+        await this.loadShaders();
         this.textures = [];
         for (const shader of this.bspObject.shaders) {
-            // FIXME: assumes Alice
+            // look for qer_editorimage
             try {
-                // Hack name until we read the actual shader files
-                let ftxName = shaderToTextureMap[shader.shader] ?? shader.shader + '.ftx';
-                if (ftxName === '.ftx') {
-                    console.log('Bad Shader, using Caulk image');
-                    console.log(shader);
-                    ftxName = 'textures/common/caulk.ftx';
+                // Look for shader script
+                let shaderScript = null;
+                if (this.bspObject.shaderScripts) {
+                    shaderScript = this.bspObject.shaderScripts.get(shader.shader);
                 }
-                const fileData = await basefs.load(ftxName);
+                if (!shaderScript) {
+                    throw 'No shader script';
+                }
+                const qer_editorimage = findParam(shaderScript, 'qer_editorimage');
+                if (!qer_editorimage) {
+                    throw 'No qer_editorimage';
+                }
 
-                // fileData is a Uint8Array
-                const dv = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
-                const width = dv.getUint32(0, true);
-                const height = dv.getUint32(4, true);
-                const hasAlpha = dv.getUint32(8, true);
+                // Use this texture
+                const imageName = qer_editorimage;
+                const fileData = await basefs.load(imageName);
+                if (imageName.endsWith('.jpg')) {
+                    // JPEG
+                    const blob = new Blob([fileData], { type: 'image/jpeg' });
+                    const imageBitmap = await createImageBitmap(blob);
+                    const texture = new THREE.CanvasTexture(imageBitmap);
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    texture.needsUpdate = true;
+                    texture.flipY = false;
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    this.textures.push(texture);
+                    continue;
+                } else if (imageName.endsWith('.ftx')) {
 
-                if (width > 5000 || height > 5000) {
-                    // Should never happen
-                    console.error(`Bad Image!: ${shader.shader}, width=${width}, height=${height}, hasAlpha=${hasAlpha}`);
-                    console.log(fileData);
-                    console.log(dv);
-                    this.textures.push(null);
-                } else {
+                    // fileData is a Uint8Array
+                    const dv = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
+                    const width = dv.getUint32(0, true);
+                    const height = dv.getUint32(4, true);
+                    //const hasAlpha = dv.getUint32(8, true);
+
                     const imageData = fileData.slice(12);
                     const texture = new THREE.DataTexture(imageData, width, height);
                     texture.colorSpace = THREE.SRGBColorSpace;
@@ -98,6 +104,8 @@ export default
                     texture.wrapS = THREE.RepeatWrapping;
                     texture.wrapT = THREE.RepeatWrapping;
                     this.textures.push(texture);
+                } else {
+                    throw `Unsupported image format: ${imageName}`;
                 }
             } catch (e) {
                 console.log(e);
@@ -127,12 +135,12 @@ export default
                     X-axis: positive X is to the right.
                     Y-axis: positive Y is into the screen.
                     Z-axis: positive Z is up.
-
+    
                 Three.js:
                     X-axis: positive X is to the right.
                     Y-axis: positive Y is up.
                     Z-axis: positive Z is out of the screen.
-
+    
             */
             vertices.push(vertex.xyz.x, vertex.xyz.z, -vertex.xyz.y);
             colours.push(vertex.colour[0] / 255, vertex.colour[1] / 255, vertex.colour[2] / 255);
@@ -162,12 +170,12 @@ export default
                     X-axis: positive X is to the right.
                     Y-axis: positive Y is into the screen.
                     Z-axis: positive Z is up.
-
+    
                 Three.js:
                     X-axis: positive X is to the right.
                     Y-axis: positive Y is up.
                     Z-axis: positive Z is out of the screen.
-
+    
             */
             vertices.push(vertex.xyz.x, vertex.xyz.z, -vertex.xyz.y);
             colours.push(vertex.colour[0] / 255, vertex.colour[1] / 255, vertex.colour[2] / 255);
