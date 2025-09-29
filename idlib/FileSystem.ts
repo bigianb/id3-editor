@@ -25,6 +25,14 @@ export default class FileSystem {
         return results;
     }
 
+    fileExists(filename: string) : boolean {
+        const pk3File = this.filenameToPK3.get(filename);
+        if (!pk3File){
+            return false;
+        }
+        return true;
+    }
+
     async readFile(filename: string) : Promise<Buffer | undefined> {
         const pk3File = this.filenameToPK3.get(filename);
         if (!pk3File){

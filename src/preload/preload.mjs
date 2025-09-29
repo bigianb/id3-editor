@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('bsp', {
 });
 
 contextBridge.exposeInMainWorld('basefs', {
+  exists: (name) => ipcRenderer.invoke('file-exists', name),
   load: (name) => ipcRenderer.invoke('file-load', name),
   loadShaders: () => ipcRenderer.invoke('shaders-load')
 });

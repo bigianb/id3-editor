@@ -9,7 +9,6 @@ import ShaderReader from '../../idlib/ShaderReader.js';
 import Preferences from './preferences.js';
 import { getGameConfig, GameType } from '../../idlib/GameConfig.js';
 
-
 const createWindow = () => {
     const mainWindow = new BrowserWindow({
         width: 800,
@@ -107,6 +106,11 @@ export async function appReady(argv: any) {
         // Useful for development
         fs.writeFileSync(bspName + '.bsp.json', JSON.stringify(bsp, undefined, 2));
         return { basePath, ...bsp };
+    });
+
+    ipcMain.handle('file-exists', async (event, fileName) => {
+        // Check if the file exists in the game fs
+        return fileSystem.fileExists(fileName);
     });
 
     ipcMain.handle('file-load', async (event, fileName) => {

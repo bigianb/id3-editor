@@ -46,6 +46,26 @@ export default
         this.bspObject.shaderScripts = shaders;
     }
 
+    async findImage(imageName){
+        let exits = await basefs.exists(imageName);
+        if (exits) {
+            return imageName;
+        }
+        let ext = imageName.slice(-4).toLowerCase();
+        let basename = imageName;
+        if (ext[[0]] === '.') {
+            basename = imageName.slice(0, -4)
+        }
+        let candidates = [basename + '.jpg', basename + '.ftx', basename + '.png', basename + '.tga'];
+        for (const candidate of candidates) {
+            exits = await basefs.exists(candidate);
+            if (exits) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
     async loadTextures() {
         /* Shader looks like:
         {
@@ -65,16 +85,19 @@ export default
                 if (this.bspObject.shaderScripts) {
                     shaderScript = this.bspObject.shaderScripts.get(shader.shader);
                 }
-                if (!shaderScript) {
-                    throw 'No shader script';
+                let imageName = shader.shader; // fallback to shader name
+                if (shaderScript) {
+                    const qer_editorimage = findParam(shaderScript, 'qer_editorimage');
+                    if (qer_editorimage) {
+                        imageName = qer_editorimage;
+                    }
                 }
-                const qer_editorimage = findParam(shaderScript, 'qer_editorimage');
-                if (!qer_editorimage) {
-                    throw 'No qer_editorimage';
+                imageName = await this.findImage(imageName);
+                if (!imageName) {
+                    throw 'No image';
                 }
 
                 // Use this texture
-                const imageName = qer_editorimage;
                 const fileData = await basefs.load(imageName);
                 if (imageName.endsWith('.jpg')) {
                     // JPEG
