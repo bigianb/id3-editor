@@ -1,3 +1,4 @@
+import {BSP, BSPDirectory, BSPEntity, BSPHeader, BSPShader} from './BspReader.types.ts';
 import FileSystem from './FileSystem.ts';
 
 const AliceLumpIDs = {
@@ -44,28 +45,7 @@ const RtcwLumpIDs = {
     VISIBILITY: 16
 };
 
-type BSPEntity = {
-    [key: string]: number | string | number[] | undefined
-}
 
-type BSPShader = {
-    shader: string,
-    surfaceFlags: number,
-    contentFlags: number,
-    subdivisions: number
-}
-
-type BSPDirectory = {
-    offset: number,
-    length: number
-}
-
-type BSPHeader = {
-    magic: string,
-    version: number,
-    checksum?: number,
-    directories: BSPDirectory[]
-}
 
 export default class BspReader {
     fileSystem: FileSystem;
@@ -73,7 +53,7 @@ export default class BspReader {
         this.fileSystem = fileSystem;
     }
 
-    async load(bspName: string) {
+    async load(bspName: string): Promise<BSP | undefined> {
         // Load the BSP file and parse it
         console.log('loading BSP:', bspName);
         const data = await this.fileSystem.readFile(bspName);
@@ -83,7 +63,7 @@ export default class BspReader {
         return this.parseBsp(data);
     }
 
-    parseBsp(data: Buffer<ArrayBufferLike>) {
+    parseBsp(data: Buffer<ArrayBufferLike>): BSP {
         // Parse the BSP data
         const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
         const header = this.readBSPHeader(dv);
@@ -96,7 +76,7 @@ export default class BspReader {
         return { header };
     }
 
-    parseRtcwBsp(header: BSPHeader, dv: DataView<ArrayBufferLike>) {
+    parseRtcwBsp(header: BSPHeader, dv: DataView<ArrayBufferLike>): BSP {
 
         const shaders = this.readRTCWShaders(dv, header.directories[RtcwLumpIDs.SHADERS]);
         const surfaces = this.readRTCWSurfaces(dv, header.directories[RtcwLumpIDs.SURFACES]);
@@ -109,7 +89,7 @@ export default class BspReader {
         return { header, shaders, entities, planes, surfaces, drawVerts, drawIndices };
     }
 
-    parseAliceBsp(header: BSPHeader, dv: DataView<ArrayBufferLike>) {
+    parseAliceBsp(header: BSPHeader, dv: DataView<ArrayBufferLike>): BSP {
         // Parse the Alice BSP data
 
         // Used for Drawing

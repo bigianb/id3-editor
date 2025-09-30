@@ -1,5 +1,5 @@
 import FileSystem from './FileSystem.ts';
-
+import { Shader, ShaderStage } from './Shaders.types.ts';
 
 export default class ShaderReader {
     fileSystem: FileSystem;
@@ -8,13 +8,13 @@ export default class ShaderReader {
         this.fileSystem = fileSystem;
     }
 
-    async loadAllShaders() {
+    async loadAllShaders(): Promise<Map<string, Shader>> {
         const shaderFiles = this.fileSystem.findFiles('scripts/', '.shader');
         return this.loadShaders(shaderFiles);
     }
 
-    async loadShaders(shaderFiles: string[]) {
-        const allShaders: Map<string, any> = new Map();
+    async loadShaders(shaderFiles: string[]): Promise<Map<string, Shader>> {
+        const allShaders: Map<string, Shader> = new Map();
         for (const shaderFile of shaderFiles) {
             const shaders = await this.load(shaderFile);
             if (shaders) {
@@ -26,7 +26,7 @@ export default class ShaderReader {
         return allShaders;
     }
 
-    async load(shaderName: string) {
+    async load(shaderName: string): Promise<Map<string, Shader> | undefined> {
         // Load the Shader file and parse it
         const data = await this.fileSystem.readFile(shaderName);
         if (!data) {
@@ -43,10 +43,10 @@ export default class ShaderReader {
     parseShader(data: Buffer) {
         const text = data.toString('utf-8');
         const lines = text.split('\n').map(line => line.trim());
-        const shaders: Map<string, any> = new Map();
+        const shaders: Map<string, Shader> = new Map();
 
-        let currentShader: any = null;
-        let currentStage: any = null;
+        let currentShader: Shader | null = null;
+        let currentStage: ShaderStage | null = null;
 
         let depth = 0;
 
@@ -71,9 +71,9 @@ export default class ShaderReader {
                     currentShader.params.push(rest);
                 }
                 if (depth === 2) {
-                    currentStage = [];
+                    currentStage = {lines: []};
                     if (rest.length > 0) {
-                        currentStage.push(rest);
+                        currentStage.lines.push(rest);
                     }
                     currentShader.stages.push(currentStage);
                 }
@@ -87,7 +87,7 @@ export default class ShaderReader {
             } else if (depth === 1) {
                 currentShader.params.push(line);
             } else if (depth === 2) {
-                currentStage.push(line);
+                currentStage?.lines.push(line);
             } else {
                 console.warn('Unexpected line depth '+depth+' outside of shader/stage:', line);
 

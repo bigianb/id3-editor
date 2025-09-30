@@ -1,6 +1,7 @@
 
 import { mat4, vec3 } from 'gl-matrix';
 import PlayerMover from './playerMover';
+import Q3Map from './Q3Map';
 
 let glContext: WebGL2RenderingContext | null = null;
 const projectionMatrix = mat4.create();
@@ -200,6 +201,8 @@ async function initMap(gl: WebGL2RenderingContext, mapName: string) {
         titleEl.innerHTML = mapName + ".bsp";
     }
     const bspObject = await bsp.load(mapName);
+    const map = new Q3Map();
+    map.init(gl, bspObject);
     /*
         map = new q3bsp(gl);
         map.onentitiesloaded = initMapEntities;
