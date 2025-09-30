@@ -7,7 +7,8 @@ let scene = null;
 let bspObject = null;
 
 const width = window.innerWidth, height = window.innerHeight;
-const camera = new THREE.PerspectiveCamera(70, width / height, 1, 50000);
+// Increase far distance once PVS is implemented.
+const camera = new THREE.PerspectiveCamera(70, width / height, 1, 1000);
 
 const func = async () => {
 

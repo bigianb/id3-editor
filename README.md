@@ -30,6 +30,5 @@ If you use VSCode then there are some run targets to help debugging. You can als
 ## TODO
 
 * Allow bsp selection via command line or UI
-* Display entities in UI
-* Read Shaders
 * Display patches properly
+* Use potentially visible sets to reduce draw calls

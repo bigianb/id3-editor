@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 
 const SurfaceType = {
     MST_BAD: 0,
@@ -121,6 +122,17 @@ export default
 
                     const imageData = fileData.slice(12);
                     const texture = new THREE.DataTexture(imageData, width, height);
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    texture.needsUpdate = true;
+                    texture.flipY = false;
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    this.textures.push(texture);
+                } else if (imageName.endsWith('.tga')) {
+                    const loader = new TGALoader();
+                    const tgaTex = loader.parse(fileData);
+
+                    const texture = new THREE.DataTexture(tgaTex.data, tgaTex.width, tgaTex.height);
                     texture.colorSpace = THREE.SRGBColorSpace;
                     texture.needsUpdate = true;
                     texture.flipY = false;
