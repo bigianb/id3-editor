@@ -14,11 +14,11 @@ contextBridge.exposeInMainWorld('game', {
 });
 
 contextBridge.exposeInMainWorld('bsp', {
-  load: (name) => ipcRenderer.invoke('bsp-load', name)
+  load: (name: string) => ipcRenderer.invoke('bsp-load', name)
 });
 
 contextBridge.exposeInMainWorld('basefs', {
-  exists: (name) => ipcRenderer.invoke('file-exists', name),
-  load: (name) => ipcRenderer.invoke('file-load', name),
+  exists: (name: string) => ipcRenderer.invoke('file-exists', name),
+  load: (name: string) => ipcRenderer.invoke('file-load', name),
   loadShaders: () => ipcRenderer.invoke('shaders-load')
 });

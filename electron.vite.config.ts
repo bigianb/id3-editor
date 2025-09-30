@@ -22,6 +22,13 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/renderer/index_webgl.html')
+        }
+      }
+    },
     plugins: [solid()]
   }
 })

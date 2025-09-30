@@ -30,7 +30,7 @@ const createWindow = () => {
     })
     //mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
 
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../renderer/index_webgl.html'));
 };
 
 export async function appReady(argv: any) {

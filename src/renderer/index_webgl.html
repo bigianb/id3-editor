@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
+  <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
+
+  <link href="main.css" rel="stylesheet" type="text/css" />
+
+  <title>ID Tech3 level viewer</title>
+</head>
+
+<body>
+  <h2 id="mapTitle"></h2>
+  <div id="viewport-frame">
+    <canvas id="viewport"></canvas>
+    <div id="loading">
+      Loading...
+    </div>
+  </div>
+</body>
+<script type="module" src="/src/webgl/renderer_wgl.js"></script>
+
+</html>
