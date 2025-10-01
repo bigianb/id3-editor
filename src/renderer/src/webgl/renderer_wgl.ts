@@ -201,10 +201,9 @@ async function initMap(gl: WebGL2RenderingContext, mapName: string) {
         titleEl.innerHTML = mapName + ".bsp";
     }
     const bspObject = await bsp.load(mapName);
-    const map = new Q3Map();
-    map.init(gl, bspObject);
+    const map = new Q3Map(gl, bspObject);
+    await map.loadShaders();
     /*
-        map = new q3bsp(gl);
         map.onentitiesloaded = initMapEntities;
         map.onbsp = initPlayerMover;
     

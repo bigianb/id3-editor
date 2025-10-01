@@ -43,7 +43,7 @@ export default
             console.error('Failed to load shader list');
             return;
         }
-        console.log(shaders);
+        //console.log(shaders);
         this.bspObject.shaderScripts = shaders;
     }
 
