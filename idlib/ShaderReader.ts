@@ -219,6 +219,7 @@ export default class ShaderReader {
             case 'map':
             case 'mapcomp':
                 stage.map = parts[1];
+                stage.isLightmap = stage.map === '$lightmap';
                 break;
             case 'mapnocomp':
                 // skip textures for no compression. They are just small versions of the mapcomp.
@@ -308,6 +309,7 @@ export default class ShaderReader {
                 if (depth === 2) {
                     currentStage = {
                         clamp: false,
+                        isLightmap: false,
                         tcMods: [],
                         tcGen: 'base',
                         rgbGen: 'identity',

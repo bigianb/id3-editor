@@ -18,6 +18,7 @@ export interface ShaderStage
 {
     clamp: boolean;
     map?: string;
+    isLightmap: boolean;
     animFreq: number;
     animMaps: string[];
     hasBlendFunc: boolean;
