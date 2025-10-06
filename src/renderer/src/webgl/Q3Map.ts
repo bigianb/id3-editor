@@ -3,6 +3,14 @@ import { BSP } from '../../../../idlib/BspReader.types';
 import { Shader } from '../../../../idlib/Shaders.types';
 import GlShaderBuilder from './glShaderBuilder';
 
+const SurfaceType = {
+    MST_BAD: 0,
+    MST_PLANAR: 1,
+    MST_PATCH: 2,
+    MST_TRIANGLE_SOUP: 3,
+    MST_FLARE: 4
+};
+
 export default class Q3Map
 {
     glShaders: Map<string, WebGLProgram> = new Map();
@@ -30,4 +38,22 @@ export default class Q3Map
         });
     }
 
+    compileGeometry(){
+        if (!this.bspObject.surfaces){
+            return;
+        }
+        for (const surface of this.bspObject.surfaces) {
+            let geometry = null;
+            if (surface.surfaceType === SurfaceType.MST_PLANAR || surface.surfaceType === SurfaceType.MST_TRIANGLE_SOUP) {
+                geometry = this.getPlanarGeometry(surface);
+            } else if (surface.surfaceType === SurfaceType.MST_PATCH) {
+                geometry = this.getPatchGeometry(surface);
+            }
+
+            if (!geometry) {
+                console.warn(`Unsupported surface type: ${surface.surfaceType}`);
+                continue;
+            }
+        }
+    }
 }

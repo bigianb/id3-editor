@@ -26,7 +26,7 @@ function onResize() {
     mat4.perspective(projectionMatrix, 45.0, canvas.width / canvas.height, 1.0, 4096.0);
 }
 
-const pressed = new Array(128);
+const pressed = new Set<string>();
 const cameraMat = mat4.create();
 let zAngle = 3;
 let xAngle = 0;
@@ -71,21 +71,21 @@ function initEvents() {
     const viewportFrame = document.getElementById("viewport-frame");
 
     document.addEventListener("keydown", function (event) {
-        if (event.keyCode == 32 && !pressed[32]) {
+        if (event.key === ' ' && !pressed.has(' ')) {
             playerMover.jump();
         }
-        pressed[event.keyCode] = true;
-        if ((event.keyCode == 'W'.charCodeAt(0) ||
-            event.keyCode == 'S'.charCodeAt(0) ||
-            event.keyCode == 'A'.charCodeAt(0) ||
-            event.keyCode == 'D'.charCodeAt(0) ||
-            event.keyCode == 32) && !event.ctrlKey) {
+        pressed.add(event.key);
+        if ((event.key === 'w' ||
+            event.key === 's' ||
+            event.key === 'a' ||
+            event.key === 'd' ||
+            event.key === ' ') && !event.ctrlKey) {
             event.preventDefault();
         }
     }, false);
 
     document.addEventListener("keyup", function (event) {
-        pressed[event.keyCode] = false;
+        pressed.delete(event.key);
     }, false);
 
     function startLook(x: number, y: number) {
@@ -133,7 +133,7 @@ function initEvents() {
     // Mouse handling code
     // When the mouse is pressed it rotates the players view
     viewport?.addEventListener("mousedown", function (event) {
-        if (event.which == 1) {
+        if (event.button === 0) {
             startLook(event.pageX, event.pageY);
         }
     }, false);
@@ -195,7 +195,7 @@ function initEvents() {
 
 // ref https://github.com/toji/webgl-quake3
 
-async function initMap(gl: WebGL2RenderingContext, mapName: string) {
+async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3Map> {
     const titleEl = document.getElementById("mapTitle");
     if (titleEl) {
         titleEl.innerHTML = mapName + ".bsp";
@@ -203,13 +203,8 @@ async function initMap(gl: WebGL2RenderingContext, mapName: string) {
     const bspObject = await bsp.load(mapName);
     const map = new Q3Map(gl, bspObject);
     await map.loadShaders();
-    /*
-        map.onentitiesloaded = initMapEntities;
-        map.onbsp = initPlayerMover;
-    
-        map.loadShaders(mapShaders);
-        map.load('maps/' + mapName + '.bsp', tesselation);
-        */
+    map.compileGeometry();
+    return map;
 }
 
 function initGL(gl: WebGL2RenderingContext) {
@@ -220,6 +215,35 @@ function initGL(gl: WebGL2RenderingContext) {
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.enable(gl.CULL_FACE);
+}
+
+function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event:{now:number, elapsed: number, frameTime: number})
+{
+    // TODO
+}
+
+function renderLoop(gl: WebGL2RenderingContext, map: Q3Map) {
+    let startTime:number = 0;
+    let lastFrameTime:number = 0;
+
+    function onRequestedFrame(){
+        const now = new Date().getTime();
+
+        if (startTime === 0) {
+            startTime = now;
+        }
+        const elapsed = now - startTime;
+        const frameTime = now - lastFrameTime;
+        lastFrameTime = now;
+        
+        onFrame(gl, map, {
+            now,
+            elapsed,
+            frameTime
+        });
+        window.requestAnimationFrame(onRequestedFrame);
+    }
+    window.requestAnimationFrame(onRequestedFrame);
 }
 
 async function main() {
@@ -239,8 +263,8 @@ async function main() {
     initGL(glContext);
 
     const config = await game.config();
-    await initMap(glContext, config.bspName);
-    //renderLoop(glContext, stats);
+    const map = await initMap(glContext, config.bspName);
+    renderLoop(glContext, map);
 
     onResize();
     window.addEventListener("resize", onResize, false);
