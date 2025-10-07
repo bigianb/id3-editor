@@ -1,5 +1,6 @@
 import { Shader, ShaderStage } from "../../../../idlib/Shaders.types";
 
+export
 interface GLShaderStage {
     texture: WebGLTexture | null;
     blendSrc: number;

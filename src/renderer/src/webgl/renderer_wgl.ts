@@ -4,6 +4,7 @@ import PlayerMover from './playerMover';
 import Q3Map from './Q3Map';
 import { BSPShader } from '../../../../idlib/BspReader.types';
 import {GLShader} from './glShaderBuilder'
+import GlShaderManager from './glShaderManager';
 
 let glContext: WebGL2RenderingContext | null = null;
 const projectionMatrix = mat4.create();
@@ -224,7 +225,10 @@ function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
 
 // ref https://github.com/toji/webgl-quake3
 
+const glShaderManager = new GlShaderManager();
+
 async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3Map> {
+    glShaderManager.init(gl);
     const titleEl = document.getElementById("mapTitle");
     if (titleEl) {
         titleEl.innerHTML = mapName + ".bsp";
@@ -281,10 +285,10 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event:{now:number, elap
 
         if(bspShader.surfaces.length == 0 /*|| surface.visible !== true*/) { continue; }
         
-        if(!q3glshader.setShader(gl, glShader)) { continue; }
+        glShaderManager.setShader(gl, glShader);
         
         for(const stage of glShader.stages) {
-            const shaderProgram = q3glshader.setShaderStage(gl, glShader, stage, frameTime);
+            const shaderProgram = glShaderManager.setShaderStage(gl, glShader, stage, event.elapsed / 1000);
             if(!shaderProgram) { continue; }
             bindShaderAttribs(shaderProgram);
             bindShaderMatrix(shaderProgram, viewMatrix, projectionMatrix);

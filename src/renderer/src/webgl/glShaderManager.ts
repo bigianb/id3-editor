@@ -1,9 +1,253 @@
+import { BSPShader } from "../../../../idlib/BspReader.types";
+import { GLShader, GLShaderStage } from "./glShaderBuilder";
+
+const q3bsp_default_vertex = '\
+    #ifdef GL_ES \n\
+    precision highp float; \n\
+    #endif \n\
+    attribute vec3 position; \n\
+    attribute vec3 normal; \n\
+    attribute vec2 texCoord; \n\
+    attribute vec2 lightCoord; \n\
+    attribute vec4 color; \n\
+\n\
+    varying vec2 vTexCoord; \n\
+    varying vec2 vLightmapCoord; \n\
+    varying vec4 vColor; \n\
+\n\
+    uniform mat4 modelViewMat; \n\
+    uniform mat4 projectionMat; \n\
+\n\
+    void main(void) { \n\
+        vec4 worldPosition = modelViewMat * vec4(position, 1.0); \n\
+        vTexCoord = texCoord; \n\
+        vColor = color; \n\
+        vLightmapCoord = lightCoord; \n\
+        gl_Position = projectionMat * worldPosition; \n\
+    } \n\
+';
+
+const q3bsp_default_fragment = '\
+    #ifdef GL_ES \n\
+    precision highp float; \n\
+    #endif \n\
+    varying vec2 vTexCoord; \n\
+    varying vec2 vLightmapCoord; \n\
+    uniform sampler2D texture; \n\
+    uniform sampler2D lightmap; \n\
+\n\
+    void main(void) { \n\
+        vec4 diffuseColor = texture2D(texture, vTexCoord); \n\
+        vec4 lightColor = texture2D(lightmap, vLightmapCoord); \n\
+        gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a); \n\
+    } \n\
+';
+
+const q3bsp_model_fragment = '\
+    #ifdef GL_ES \n\
+    precision highp float; \n\
+    #endif \n\
+    varying vec2 vTexCoord; \n\
+    varying vec4 vColor; \n\
+    uniform sampler2D texture; \n\
+\n\
+    void main(void) { \n\
+        vec4 diffuseColor = texture2D(texture, vTexCoord); \n\
+        gl_FragColor = vec4(diffuseColor.rgb * vColor.rgb, diffuseColor.a); \n\
+    } \n\
+';
+
 
 /**
  * Manages compiling gl shaders and binding them. Also deals with binding textures to shaders.
  */
-export default class glShaderManager
-{
+export default class GlShaderManager {
 
+    white: WebGLTexture | null = null;
+    defaultTexture: WebGLTexture | null = null;;
+    defaultProgram: WebGLProgram | null = null;
+    modelProgram: WebGLProgram | null = null;
+    defaultShader: GLShader | null = null;
+
+    init(gl: WebGL2RenderingContext) {
+        this.white = this.createSolidTexture(gl, [255, 255, 255, 255]);
+        this.defaultTexture = this.white;
+        this.defaultProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_default_fragment);
+        this.modelProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_model_fragment);
+        this.defaultShader = this.buildDefault(gl);
+    }
+
+    buildDefault(gl: WebGL2RenderingContext, surface?: BSPShader): GLShader {
+        const diffuseStage:GLShaderStage = {
+            map: (surface ? surface.shader + '.png' : null),
+            isLightmap: false,
+            blendSrc: gl.ONE,
+            blendDest: gl.ZERO,
+            depthFunc: gl.LEQUAL,
+            depthWrite: true,
+            texture: null
+        };
+
+        if (surface) {
+            this.loadTexture(gl, surface, diffuseStage);
+        } else {
+            diffuseStage.texture = this.defaultTexture;
+        }
+
+        const glShader:GLShader = {
+            cull: gl.FRONT,
+            blend: false,
+            sort: 3,
+            stages: [diffuseStage],
+            sky: false,
+            name: 'default'
+        };
+
+        return glShader;
+    }
+
+    compileShaderProgram(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string): WebGLProgram | null {
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        if (!fragmentShader) {
+            return null;
+        }
+        gl.shaderSource(fragmentShader, fragmentSrc);
+        gl.compileShader(fragmentShader);
+
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            /*console.debug(gl.getShaderInfoLog(fragmentShader));
+            console.debug(vertexSrc);
+            console.debug(fragmentSrc);*/
+            gl.deleteShader(fragmentShader);
+            return null;
+        }
+
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        if (!vertexShader) {
+            gl.deleteShader(fragmentShader);
+            return null;
+        }
+        gl.shaderSource(vertexShader, vertexSrc);
+        gl.compileShader(vertexShader);
+
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+            /*console.debug(gl.getShaderInfoLog(vertexShader));
+            console.debug(vertexSrc);
+            console.debug(fragmentSrc);*/
+            gl.deleteShader(vertexShader);
+            return null;
+        }
+
+        const shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            gl.deleteProgram(shaderProgram);
+            gl.deleteShader(vertexShader);
+            gl.deleteShader(fragmentShader);
+            /*console.debug('Could not link shaders');
+            console.debug(vertexSrc);
+            console.debug(fragmentSrc);*/
+            return null;
+        }
+
+        let i, attrib, uniform;
+        const attribCount = gl.getProgramParameter(shaderProgram, gl.ACTIVE_ATTRIBUTES);
+        shaderProgram.attrib = {};
+        for (i = 0; i < attribCount; i++) {
+            attrib = gl.getActiveAttrib(shaderProgram, i);
+            shaderProgram.attrib[attrib.name] = gl.getAttribLocation(shaderProgram, attrib.name);
+        }
+
+        const uniformCount = gl.getProgramParameter(shaderProgram, gl.ACTIVE_UNIFORMS);
+        shaderProgram.uniform = {};
+        for (i = 0; i < uniformCount; i++) {
+            uniform = gl.getActiveUniform(shaderProgram, i);
+            shaderProgram.uniform[uniform.name] = gl.getUniformLocation(shaderProgram, uniform.name);
+        }
+
+        return shaderProgram;
+    }
+
+    createSolidTexture(gl: WebGL2RenderingContext, colour: [number, number, number, number]): WebGLTexture {
+        const data = new Uint8Array(colour);
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, data);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        return texture;
+    }
+
+    setShader(gl: WebGL2RenderingContext, shader: GLShader) {
+        if (!shader) {
+            gl.enable(gl.CULL_FACE);
+            gl.cullFace(gl.BACK);
+        } else if (shader.cull && !shader.sky) {
+            gl.enable(gl.CULL_FACE);
+            gl.cullFace(shader.cull);
+        } else {
+            gl.disable(gl.CULL_FACE);
+        }
+    }
+
+    /**
+     * 
+     * @param gl 
+     * @param shader 
+     * @param shaderStage 
+     * @param time in seconds
+     * @returns 
+     */
+    setShaderStage(gl: WebGL2RenderingContext, shader: GLShader, stage: GLShaderStage, time: number) {
+
+        if (stage.animFreq) {
+            const animFrame = Math.floor(time * stage.animFreq) % stage.animTexture.length;
+            stage.texture = stage.animTexture[animFrame];
+        }
+
+        gl.blendFunc(stage.blendSrc, stage.blendDest);
+
+        if (stage.depthWrite && !shader.sky) {
+            gl.depthMask(true);
+        } else {
+            gl.depthMask(false);
+        }
+
+        gl.depthFunc(stage.depthFunc);
+
+        let program = stage.program;
+
+        if (!program) {
+            if (shader.model) {
+                program = this.modelProgram;
+            } else {
+                program = this.defaultProgram;
+            }
+        }
+
+        gl.useProgram(program);
+
+        let texture = stage.texture;
+        if (!texture) { texture = this.defaultTexture; }
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.uniform1i(program.uniform.texture, 0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        if (program.uniform.lightmap) {
+            gl.activeTexture(gl.TEXTURE1);
+            gl.uniform1i(program.uniform.lightmap, 1);
+            gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
+        }
+
+        if (program.uniform.time) {
+            gl.uniform1f(program.uniform.time, time);
+        }
+
+        return program;
+    };
 
 }
