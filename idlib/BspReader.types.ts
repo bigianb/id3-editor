@@ -2,11 +2,35 @@ export type BSPEntity = {
     [key: string]: number | string | number[] | undefined
 }
 
+export type BSPSurface = {
+    shaderNum: number,
+    fogNum: number,
+    surfaceType: number,
+    firstVert: number,
+    numVerts: number,
+    firstIndex: number,
+    numIndices: number,
+    lightMapNum: number,
+    lightmapX: number,
+    lightmapY: number,
+    lightMapWidth: number,
+    lightMapHeight: number,
+    lightmapOrigin: { x: number, y: number, z: number },
+    lightMapVecs: { x: number, y: number, z: number }[],
+    patchWidth: number,
+    patchHeight: number,
+    subdivisions: number
+}
+
 export type BSPShader = {
     shader: string,
     surfaceFlags: number,
     contentFlags: number,
-    subdivisions: number
+    subdivisions: number,
+    // Not stored in the BSP but useful to track when drawing.
+    surfaces: BSPSurface[],
+    indexOffset: number,
+    indexCount: number
 }
 
 export type BSPDirectory = {
@@ -21,37 +45,21 @@ export type BSPHeader = {
     directories: BSPDirectory[]
 }
 
+export type BSPVertex = {
+    xyz: { x: number, y: number, z: number },
+    st: [number, number],
+    lightmap: [number, number],
+    normal: { x: number, y: number, z: number },
+    colour: [number, number, number, number]
+}
+
 export interface BSP {
     header: BSPHeader,
     shaders?: BSPShader[],
     entities?: BSPEntity[],
     planes?: { normal: number[], distance: number }[],
-    surfaces?: {
-        shaderNum: number,
-        fogNum: number,
-        surfaceType: number,
-        firstVert: number,
-        numVerts: number,
-        firstIndex: number,
-        numIndices: number,
-        lightMapNum: number,
-        lightmapX: number,
-        lightmapY: number,
-        lightMapWidth: number,
-        lightMapHeight: number,
-        lightmapOrigin: { x: number, y: number, z: number },
-        lightMapVecs: { x: number, y: number, z: number }[],
-        patchWidth: number,
-        patchHeight: number,
-        subdivisions: number
-    }[],
-    drawVerts?: {
-        xyz: { x: number, y: number, z: number },
-        st: [number, number],
-        lightmap: [number, number],
-        normal: { x: number, y: number, z: number },
-        colour: [number, number, number, number]
-    }[],
+    surfaces?: BSPSurface[],
+    drawVerts?: BSPVertex[],
     drawIndices?: number[],
     leafBrushes?: number[],
     leafSurfaces?: number[],

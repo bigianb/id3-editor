@@ -1,4 +1,4 @@
-import {BSP, BSPDirectory, BSPEntity, BSPHeader, BSPShader} from './BspReader.types.ts';
+import {BSP, BSPDirectory, BSPEntity, BSPHeader, BSPShader, BSPVertex} from './BspReader.types.ts';
 import FileSystem from './FileSystem.ts';
 
 const AliceLumpIDs = {
@@ -424,8 +424,8 @@ export default class BspReader {
         return leafs;
     }
 
-    readDrawVerts(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
-        const drawVerts = [];
+    readDrawVerts(dv: DataView<ArrayBufferLike>, directory: BSPDirectory): BSPVertex[] {
+        const drawVerts:BSPVertex[] = [];
         const start = directory.offset;
         const end = start + directory.length;
         for (let i = start; i < end; i += 44) {
@@ -535,7 +535,10 @@ export default class BspReader {
                 shader: this.readString(dv, i, 64),
                 surfaceFlags: dv.getUint32(i + 64, true),
                 contentFlags: dv.getUint32(i + 68, true),
-                subdivisions: hasSubdivisions ? dv.getUint32(i + 72, true) : 0
+                subdivisions: hasSubdivisions ? dv.getUint32(i + 72, true) : 0,
+                surfaces: [],
+                indexOffset: 0,
+                indexCount: 0
             };
             shaders.push(shader);
             if (hasSubdivisions) {

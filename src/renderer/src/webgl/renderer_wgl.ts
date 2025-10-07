@@ -2,6 +2,8 @@
 import { mat4, vec3 } from 'gl-matrix';
 import PlayerMover from './playerMover';
 import Q3Map from './Q3Map';
+import { BSPShader } from '../../../../idlib/BspReader.types';
+import {GLShader} from './glShaderBuilder'
 
 let glContext: WebGL2RenderingContext | null = null;
 const projectionMatrix = mat4.create();
@@ -192,6 +194,33 @@ function initEvents() {
     }, false);
 
 }
+const effectSurfaces:{bspShader: BSPShader, glShader: GLShader}[] = [];
+
+function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
+{
+    if (!map.bspObject.shaders){
+        return;
+    }
+    effectSurfaces.length = 0;
+    // Loop though each of the bsp shaders and look-up the real
+    // shader based on the name.
+    for(const bspShader of map.bspObject.shaders){
+        if (bspShader.surfaces.length > 0){
+            const glShader = map.glShaders.get(bspShader.shader);
+            if (!glShader){
+                // TODO: use default shader
+            } else {
+                effectSurfaces.push({bspShader, glShader});
+            }
+        }
+    }
+    // Sort to ensure correct order of transparent objects
+    effectSurfaces.sort(function(a, b) {
+        const order = a.glShader.sort - b.glShader.sort;
+        return order;
+    });
+
+}
 
 // ref https://github.com/toji/webgl-quake3
 
@@ -204,6 +233,7 @@ async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3M
     const map = new Q3Map(gl, bspObject);
     await map.loadShaders();
     map.compileGeometry();
+    bindShaders(gl, map);
     return map;
 }
 
@@ -217,9 +247,51 @@ function initGL(gl: WebGL2RenderingContext) {
     gl.enable(gl.CULL_FACE);
 }
 
+const playerHeight = 57;
+
+function getViewMatrix(viewMatrix: mat4) {
+  mat4.identity(viewMatrix);
+
+  mat4.translate(viewMatrix, viewMatrix, playerMover.position);
+  mat4.translate(viewMatrix, viewMatrix, [0, 0, playerHeight]);
+  mat4.rotateZ(viewMatrix, viewMatrix, -zAngle);
+  mat4.rotateX(viewMatrix, viewMatrix, Math.PI/2);
+  mat4.rotateX(viewMatrix, viewMatrix, -xAngle);
+  mat4.invert(viewMatrix, viewMatrix);
+}
+
 function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event:{now:number, elapsed: number, frameTime: number})
 {
-    // TODO
+    gl.depthMask(true);
+    const viewMatrix = mat4.create();
+    getViewMatrix(viewMatrix);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+
+    // Here's where all the magic happens...
+    //map.draw(viewMatrix, projectionMatrix);
+    if (map.indexCount === 0 || !map.indexBuffer || !map.vertexBuffer){
+        return;
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, map.indexBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, map.vertexBuffer);
+
+    for(const {bspShader, glShader} of effectSurfaces) {
+
+        if(bspShader.surfaces.length == 0 /*|| surface.visible !== true*/) { continue; }
+        
+        if(!q3glshader.setShader(gl, glShader)) { continue; }
+        
+        for(const stage of glShader.stages) {
+            const shaderProgram = q3glshader.setShaderStage(gl, glShader, stage, frameTime);
+            if(!shaderProgram) { continue; }
+            bindShaderAttribs(shaderProgram);
+            bindShaderMatrix(shaderProgram, viewMatrix, projectionMatrix);
+            // Draw all geometry that uses this textures
+            gl.drawElements(gl.TRIANGLES, bspShader.indexCount / 3, gl.UNSIGNED_SHORT, bspShader.indexOffset);
+        }
+    }
 }
 
 function renderLoop(gl: WebGL2RenderingContext, map: Q3Map) {

@@ -8,6 +8,7 @@ interface GLShaderStage {
     [key: string]: any;
 }
 
+export
 interface GLShader {
     cull: number | null;
     sort: number;
@@ -18,6 +19,9 @@ interface GLShader {
     [key: string]: any;
 }
 
+/**
+ * Given a ID Tech 3 shader file, build an equivalent webgl shader.
+ */
 export default class GlShaderBuilder {
 
     gl: WebGLRenderingContextBase;
