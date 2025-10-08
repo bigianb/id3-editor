@@ -1,5 +1,7 @@
 import { BSPShader } from "../../../../idlib/BspReader.types";
 import { GLShader, GLShaderStage } from "./glShaderBuilder";
+import { findImage } from './imageLoader';
+import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 
 const q3bsp_default_vertex = '\
     #ifdef GL_ES \n\
@@ -61,7 +63,8 @@ const q3bsp_model_fragment = '\
 /**
  * Manages compiling gl shaders and binding them. Also deals with binding textures to shaders.
  */
-export default class GlShaderManager {
+export default class GlShaderManager
+{
 
     white: WebGLTexture | null = null;
     defaultTexture: WebGLTexture | null = null;;
@@ -69,7 +72,8 @@ export default class GlShaderManager {
     modelProgram: WebGLProgram | null = null;
     defaultShader: GLShader | null = null;
 
-    init(gl: WebGL2RenderingContext) {
+    init(gl: WebGL2RenderingContext)
+    {
         this.white = this.createSolidTexture(gl, [255, 255, 255, 255]);
         this.defaultTexture = this.white;
         this.defaultProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_default_fragment);
@@ -77,8 +81,9 @@ export default class GlShaderManager {
         this.defaultShader = this.buildDefault(gl);
     }
 
-    buildDefault(gl: WebGL2RenderingContext, surface?: BSPShader): GLShader {
-        const diffuseStage:GLShaderStage = {
+    buildDefault(gl: WebGL2RenderingContext, surface?: BSPShader): GLShader
+    {
+        const diffuseStage: GLShaderStage = {
             map: (surface ? surface.shader + '.png' : null),
             isLightmap: false,
             blendSrc: gl.ONE,
@@ -94,7 +99,7 @@ export default class GlShaderManager {
             diffuseStage.texture = this.defaultTexture;
         }
 
-        const glShader:GLShader = {
+        const glShader: GLShader = {
             cull: gl.FRONT,
             blend: false,
             sort: 3,
@@ -106,7 +111,72 @@ export default class GlShaderManager {
         return glShader;
     }
 
-    compileShaderProgram(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string): WebGLProgram | null {
+    async loadTexture(gl: WebGL2RenderingContext, surface: BSPShader, stage: GLShaderStage)
+    {
+        if (!stage.map) {
+            stage.texture = this.white;
+            return;
+        } else if (stage.map === '$lightmap') {
+            // TODO stage.texture = (surface.geomType != 3 ? this.lightmap : this.white);
+            stage.texture = this.white;
+            return;
+        } else if (stage.map === '$whiteimage') {
+            stage.texture = this.white;
+            return;
+        }
+
+        stage.texture = this.defaultTexture;
+
+        if (stage.map == 'anim') {
+            stage.animTexture = [];
+            for (let i = 0; i < stage.animMaps.length; ++i) {
+                stage.animTexture[i] = await this.loadTextureFile(gl, stage, stage.animMaps[i]);
+            }
+            stage.animFrame = 0;
+        } else {
+            stage.texture = await this.loadTextureFile(gl, stage, stage.map);
+        }
+    }
+
+    async loadTextureFile(gl: WebGL2RenderingContext, stage: GLShaderStage, name: string): Promise<WebGLTexture | null>
+    {
+        const imageFSName = await findImage(name);
+        if (!imageFSName){
+            return this.defaultTexture;
+        }
+        const fileData = await basefs.load(imageFSName);
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        if (imageFSName.endsWith('.jpg')) {
+            // JPEG
+            const blob = new Blob([fileData], { type: 'image/jpeg' });
+            const imageBitmap = await createImageBitmap(blob);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageBitmap);
+        } else if (imageFSName.endsWith('.ftx')) {
+            // fileData is a Uint8Array
+            const dv = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
+            const width = dv.getUint32(0, true);
+            const height = dv.getUint32(4, true);
+            const imageData = fileData.slice(12);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
+        } else if (imageFSName.endsWith('.tga')) {
+            const loader = new TGALoader();
+            const tgaTex = loader.parse(fileData);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, tgaTex.width, tgaTex.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, tgaTex.data);
+        }
+
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        if(stage.clamp) {
+            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE );
+            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE );
+        }
+        gl.generateMipmap(gl.TEXTURE_2D);
+        return texture;
+    }
+
+    compileShaderProgram(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string): WebGLProgram | null
+    {
         const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         if (!fragmentShader) {
             return null;
@@ -171,7 +241,8 @@ export default class GlShaderManager {
         return shaderProgram;
     }
 
-    createSolidTexture(gl: WebGL2RenderingContext, colour: [number, number, number, number]): WebGLTexture {
+    createSolidTexture(gl: WebGL2RenderingContext, colour: [number, number, number, number]): WebGLTexture
+    {
         const data = new Uint8Array(colour);
         const texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -181,7 +252,8 @@ export default class GlShaderManager {
         return texture;
     }
 
-    setShader(gl: WebGL2RenderingContext, shader: GLShader) {
+    setShader(gl: WebGL2RenderingContext, shader: GLShader)
+    {
         if (!shader) {
             gl.enable(gl.CULL_FACE);
             gl.cullFace(gl.BACK);
@@ -201,7 +273,8 @@ export default class GlShaderManager {
      * @param time in seconds
      * @returns 
      */
-    setShaderStage(gl: WebGL2RenderingContext, shader: GLShader, stage: GLShaderStage, time: number) {
+    setShaderStage(gl: WebGL2RenderingContext, shader: GLShader, stage: GLShaderStage, time: number): WebGLProgram
+    {
 
         if (stage.animFreq) {
             const animFrame = Math.floor(time * stage.animFreq) % stage.animTexture.length;

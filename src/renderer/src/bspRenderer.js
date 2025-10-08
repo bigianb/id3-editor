@@ -54,7 +54,7 @@ export default
         }
         let ext = imageName.slice(-4).toLowerCase();
         let basename = imageName;
-        if (ext[[0]] === '.') {
+        if (ext[0] === '.') {
             basename = imageName.slice(0, -4)
         }
         let candidates = [basename + '.jpg', basename + '.ftx', basename + '.png', basename + '.tga'];
