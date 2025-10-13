@@ -185,9 +185,9 @@ export default class GlShaderManager
         gl.compileShader(fragmentShader);
 
         if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-            /*console.debug(gl.getShaderInfoLog(fragmentShader));
-            console.debug(vertexSrc);
-            console.debug(fragmentSrc);*/
+            console.warn(gl.getShaderInfoLog(fragmentShader));
+            console.warn(vertexSrc);
+            console.warn(fragmentSrc);
             gl.deleteShader(fragmentShader);
             return null;
         }
@@ -201,9 +201,9 @@ export default class GlShaderManager
         gl.compileShader(vertexShader);
 
         if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-            /*console.debug(gl.getShaderInfoLog(vertexShader));
-            console.debug(vertexSrc);
-            console.debug(fragmentSrc);*/
+            console.warn(gl.getShaderInfoLog(vertexShader));
+            console.warn(vertexSrc);
+            console.warn(fragmentSrc);
             gl.deleteShader(vertexShader);
             return null;
         }
@@ -217,9 +217,9 @@ export default class GlShaderManager
             gl.deleteProgram(shaderProgram);
             gl.deleteShader(vertexShader);
             gl.deleteShader(fragmentShader);
-            /*console.debug('Could not link shaders');
-            console.debug(vertexSrc);
-            console.debug(fragmentSrc);*/
+            console.warn('Could not link shaders');
+            console.warn(vertexSrc);
+            console.warn(fragmentSrc);
             return null;
         }
 

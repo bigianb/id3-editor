@@ -1,5 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron/main';
 import { shell } from 'electron';
+import { is } from '@electron-toolkit/utils'
+
 
 import path from 'node:path';
 import fs from 'fs';
@@ -9,7 +11,8 @@ import ShaderReader from '../../idlib/ShaderReader.js';
 import Preferences from './preferences.js';
 import { getGameConfig, GameType } from '../../idlib/GameConfig.js';
 
-const createWindow = () => {
+const createWindow = () =>
+{
     const mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
@@ -20,26 +23,38 @@ const createWindow = () => {
         }
     });
 
-    mainWindow.on('ready-to-show', () => {
-        mainWindow.show()
-    })
+    mainWindow.on('ready-to-show', () =>
+    {
+        mainWindow.show();
+    });
 
-    mainWindow.webContents.setWindowOpenHandler((details) => {
-        shell.openExternal(details.url)
-        return { action: 'deny' }
-    })
-    //mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    mainWindow.webContents.setWindowOpenHandler((details) =>
+    {
+        shell.openExternal(details.url);
+        return { action: 'deny' };
+    });
 
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index_webgl.html'));
+    // HMR for renderer base on electron-vite cli.
+    // Load the remote URL for development or the local html file for production.
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+        mainWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/index_webgl.html`)
+    } else {
+        mainWindow.loadFile(path.join(__dirname, '../renderer/index_webgl.html'))
+    }
+
+    const devtools = new BrowserWindow()
+    mainWindow.webContents.setDevToolsWebContents(devtools.webContents)
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
 };
 
-export async function appReady(argv: any) {
+export async function appReady(argv: any)
+{
 
     let basePath = undefined;
-    
+
     console.log('argv', argv);
     if (argv['fs_game']) {
-      basePath = argv['fs_game'];
+        basePath = argv['fs_game'];
     }
 
     let gameType = undefined;
@@ -95,11 +110,13 @@ export async function appReady(argv: any) {
 
     await fileSystem.register(gameConfig.pk3Files);
 
-    ipcMain.handle('game-config', async () => {
-        return {gameConfig, bspName};
+    ipcMain.handle('game-config', async () =>
+    {
+        return { gameConfig, bspName };
     });
 
-    ipcMain.handle('bsp-load', async (event, bspName) => {
+    ipcMain.handle('bsp-load', async (event, bspName) =>
+    {
         // Handle the request to load a BSP file
         const bsp = await new BspReader(fileSystem).load('maps/' + bspName + '.bsp');
 
@@ -108,18 +125,21 @@ export async function appReady(argv: any) {
         return { basePath, ...bsp };
     });
 
-    ipcMain.handle('file-exists', async (event, fileName) => {
+    ipcMain.handle('file-exists', async (event, fileName) =>
+    {
         // Check if the file exists in the game fs
         return fileSystem.fileExists(fileName);
     });
 
-    ipcMain.handle('file-load', async (event, fileName) => {
+    ipcMain.handle('file-load', async (event, fileName) =>
+    {
         // Handle the request to load a file from the game fs
         const fileContents = await fileSystem.readFile(fileName);
         return fileContents;
     });
 
-    ipcMain.handle('shaders-load', async (event, fileName) => {
+    ipcMain.handle('shaders-load', async (event, fileName) =>
+    {
         const shaderReader = new ShaderReader(fileSystem);
         const shaders = await shaderReader.loadAllShaders();
         return shaders;
@@ -127,7 +147,8 @@ export async function appReady(argv: any) {
 
     createWindow();
 
-    app.on('activate', () => {
+    app.on('activate', () =>
+    {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
         }

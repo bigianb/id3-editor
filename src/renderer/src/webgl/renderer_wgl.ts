@@ -350,7 +350,7 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
         if (glShader.stages.length === 0){
             console.log('shader ' + bspShader.shader + ' has no stages');
         }
-        console.log('drawing ' + bspShader.indexCount / 3 + ' triangles using shader ' + bspShader.shader);
+        //console.log('drawing ' + bspShader.indexCount / 3 + ' triangles using shader ' + bspShader.shader);
         for (const stage of glShader.stages) {
             const shaderProgram = glShaderManager.setShaderStage(gl, glShader, stage, event.elapsed / 1000);
             if (!shaderProgram) {

@@ -92,8 +92,9 @@ export default class Q3Map
         const indices:number[] = [];
         for(const shader of this.bspObject.shaders) {
             if(shader.surfaces.length > 0) {
+                shader.indexCount = 0;
                 shader.indexOffset = indices.length * 2; // Offset is in bytes
-                for(const surface of this.bspObject.surfaces) {
+                for(const surface of shader.surfaces) {
                     for(let k = 0; k < surface.numIndices; ++k) {
                         indices.push(surface.firstIndex + this.bspObject.drawIndices[k]);
                     }

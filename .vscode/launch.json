@@ -4,7 +4,10 @@
     {
       "name": "Main + renderer",
       "configurations": ["Main", "Renderer"],
-      "stopAll": true
+      "stopAll": true,
+      "presentation": {
+        "order": 1
+      }
     }
   ],
   "configurations": [
@@ -26,18 +29,26 @@
       "port": 9222,
       "request": "attach",
       "type": "chrome",
-      "webRoot": "${workspaceFolder}"
+      "webRoot": "${workspaceFolder}/src/renderer",
+      "timeout": 60000,
+      "presentation": {
+        "hidden": true
+      }
     },
     {
       "name": "Main",
       "type": "node",
       "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "cwd": "${workspaceRoot}",
+      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite",
       "windows": {
-        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+        "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite.cmd"
       },
-      "args": [".", "--remote-debugging-port=9222", "--fs_game=/Users/ian/doom/Alice1/bin/base"],
+      "runtimeArgs": ["--sourcemap"],
+      "env": {
+        "REMOTE_DEBUGGING_PORT": "9222"
+      },
+      "args": [".", "--remote-debugging-port=9222"],
       "outputCapture": "std",
       "console": "integratedTerminal"
     }
