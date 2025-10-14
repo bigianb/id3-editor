@@ -111,6 +111,18 @@ export default class GlShaderManager
         return glShader;
     }
 
+    async loadShaderMaps(gl: WebGL2RenderingContext, surface: BSPShader, shader: GLShader) {
+        for(const stage of shader.stages) {
+            if(stage.map) {
+                await this.loadTexture(gl, surface, stage);
+            }
+
+            if(stage.shaderSrc && !stage.program) {
+                stage.program = this.compileShaderProgram(gl, stage.shaderSrc.vertex, stage.shaderSrc.fragment);
+            }
+        }
+    }
+
     async loadTexture(gl: WebGL2RenderingContext, surface: BSPShader, stage: GLShaderStage)
     {
         if (!stage.map) {

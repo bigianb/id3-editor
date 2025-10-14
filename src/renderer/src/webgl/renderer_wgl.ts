@@ -21,13 +21,14 @@ function onResize()
     if (document.fullscreenElement) {
         canvas.width = screen.width * devicePixelRatio;
         canvas.height = screen.height * devicePixelRatio;
-    } else {
+    } else if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
         canvas.width = canvas.clientWidth * devicePixelRatio;
         canvas.height = canvas.clientHeight * devicePixelRatio;
     }
-
-    glContext?.viewport(0, 0, canvas.width, canvas.height);
-    mat4.perspective(projectionMatrix, 45.0, canvas.width / canvas.height, 1.0, 4096.0);
+    if (canvas.width > 0 && canvas.height > 0){
+        glContext?.viewport(0, 0, canvas.width, canvas.height);
+        mat4.perspective(projectionMatrix, 45.0, canvas.width / canvas.height, 1.0, 4096.0);
+    }
 }
 
 const pressed = new Set<string>();
@@ -230,6 +231,7 @@ function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
                 // TODO: use default shader
             } else {
                 effectSurfaces.push({ bspShader, glShader });
+                glShaderManager.loadShaderMaps(gl, bspShader, glShader);
             }
         }
     }

@@ -22,7 +22,7 @@ canvas {
     cursor: move;
     text-align: center;
     background-color: black;
-    display: none;
+    
 }
 
 #viewport-frame:-moz-full-screen, :-moz-full-screen canvas, canvas:-moz-full-screen {

@@ -1,7 +1,8 @@
 import { Shader, ShaderStage } from "../../../../idlib/Shaders.types";
 
 export
-interface GLShaderStage {
+    interface GLShaderStage
+{
     texture: WebGLTexture | null;
     blendSrc: number;
     blendDest: number;
@@ -10,7 +11,8 @@ interface GLShaderStage {
 }
 
 export
-interface GLShader {
+    interface GLShader
+{
     cull: number | null;
     sort: number;
     sky: boolean;
@@ -23,16 +25,19 @@ interface GLShader {
 /**
  * Given a ID Tech 3 shader file, build an equivalent webgl shader.
  */
-export default class GlShaderBuilder {
+export default class GlShaderBuilder
+{
 
     gl: WebGLRenderingContextBase;
 
-    constructor(gl: WebGLRenderingContextBase) {
+    constructor(gl: WebGLRenderingContextBase)
+    {
         this.gl = gl;
         console.log('GlShaderBuilder init', gl);
     }
 
-    build(name: string, shader: Shader): GLShader {
+    build(name: string, shader: Shader): GLShader
+    {
         const glShader: GLShader = {
             cull: this.translateCull(shader.cull),
             sort: shader.sort,
@@ -50,7 +55,7 @@ export default class GlShaderBuilder {
                 blendDest: this.translateBlend(stage.blendDst),
                 depthFunc: this.translateDepthFunc(stage.depthFunc),
                 vertexShaderSource: this.buildVertexShader(shader, stage),
-                fragmentShaderSource: ''
+                fragmentShaderSource: this.buildFragmentShader(shader, stage)
             };
 
             glShader.stages.push(glStage);
@@ -59,7 +64,8 @@ export default class GlShaderBuilder {
         return glShader;
     }
 
-    translateDepthFunc(depth: string): number {
+    translateDepthFunc(depth: string): number
+    {
         if (!depth) { return this.gl.LEQUAL; }
         switch (depth.toLowerCase()) {
             case 'gequal': return this.gl.GEQUAL;
@@ -71,7 +77,8 @@ export default class GlShaderBuilder {
         }
     };
 
-    translateCull(cull: string): number | null {
+    translateCull(cull: string): number | null
+    {
         if (!cull) { return this.gl.FRONT; }
         switch (cull.toLowerCase()) {
             case 'disable':
@@ -83,7 +90,8 @@ export default class GlShaderBuilder {
         }
     }
 
-    translateBlend(blend: string): number {
+    translateBlend(blend: string): number
+    {
         if (!blend) { return this.gl.ONE; }
         switch (blend.toUpperCase()) {
             case 'GL_ONE': return this.gl.ONE;
@@ -98,7 +106,8 @@ export default class GlShaderBuilder {
         }
     }
 
-    buildVertexShader(shader: Shader, stage: ShaderStage): string {
+    buildVertexShader(shader: Shader, stage: ShaderStage): string
+    {
         const builder = new ShaderProgramBuilder();
 
         builder.addAttributes({
@@ -225,48 +234,138 @@ export default class GlShaderBuilder {
         return builder.build();
     }
 
+    buildFragmentShader(shader: Shader, stage: ShaderStage): string
+    {
+        const builder = new ShaderProgramBuilder();
+
+        builder.addVaryings({
+            vTexCoord: 'vec2',
+            vColor: 'vec4',
+        });
+
+        builder.addUniforms({
+            texture: 'sampler2D',
+            time: 'float',
+        });
+
+        builder.addLines(['vec4 texColor = texture2D(texture, vTexCoord.st);']);
+
+        switch (stage.rgbGen) {
+            case 'vertex':
+                builder.addLines(['vec3 rgb = texColor.rgb * vColor.rgb;']);
+                break;
+            case 'wave':
+                builder.addWaveform('rgbWave', stage.rgbWaveform);
+                builder.addLines(['vec3 rgb = texColor.rgb * rgbWave;']);
+                break;
+            default:
+                builder.addLines(['vec3 rgb = texColor.rgb;']);
+                break;
+        }
+
+        switch (stage.alphaGen) {
+            case 'wave':
+                // TODO builder.addWaveform('alpha', stage.alphaWaveform);
+                break;
+            case 'lightingspecular':
+                // For now this is VERY special cased. May not work well with all instances of lightingSpecular
+                builder.addUniforms({
+                    lightmap: 'sampler2D'
+                });
+                builder.addVaryings({
+                    vLightCoord: 'vec2',
+                    vLight: 'float'
+                });
+                builder.addLines([
+                    'vec4 light = texture2D(lightmap, vLightCoord.st);',
+                    'rgb *= light.rgb;',
+                    'rgb += light.rgb * texColor.a * 0.6;', // This was giving me problems, so I'm ignorning an actual specular calculation for now
+                    'float alpha = 1.0;'
+                ]);
+                break;
+            default:
+                builder.addLines(['float alpha = texColor.a;']);
+                break;
+        }
+        /* TODO
+        if (stage.alphaFunc) {
+            switch (stage.alphaFunc) {
+                case 'GT0':
+                    builder.addLines([
+                        'if(alpha == 0.0) { discard; }'
+                    ]);
+                    break;
+                case 'LT128':
+                    builder.addLines([
+                        'if(alpha >= 0.5) { discard; }'
+                    ]);
+                    break;
+                case 'GE128':
+                    builder.addLines([
+                        'if(alpha < 0.5) { discard; }'
+                    ]);
+                    break;
+                default:
+                    break;
+            }
+        }
+*/
+        builder.addLines(['gl_FragColor = vec4(rgb, alpha);']);
+        return builder.build();
+    }
+
 };
 
-class ShaderProgramBuilder {
+class ShaderProgramBuilder
+{
     attributes: string[] = [];
     uniforms: string[] = [];
     varyings: string[] = [];
     statements: string[] = [];
     functions: string[] = [];
 
-    addAttributes(attributes: { [key: string]: string }): void {
-        Object.keys(attributes).forEach((key) => {
+    addAttributes(attributes: { [key: string]: string; }): void
+    {
+        Object.keys(attributes).forEach((key) =>
+        {
             this.attributes.push('attribute ' + attributes[key] + ' ' + key + ';');
         });
     }
 
-    addUniforms(uniforms: { [key: string]: string }): void {
-        Object.keys(uniforms).forEach((key) => {
+    addUniforms(uniforms: { [key: string]: string; }): void
+    {
+        Object.keys(uniforms).forEach((key) =>
+        {
             this.uniforms.push('uniform ' + uniforms[key] + ' ' + key + ';');
         });
     }
 
-    addVaryings(varyings: { [key: string]: string }): void {
-        Object.keys(varyings).forEach((key) => {
+    addVaryings(varyings: { [key: string]: string; }): void
+    {
+        Object.keys(varyings).forEach((key) =>
+        {
             this.varyings.push('varying ' + varyings[key] + ' ' + key + ';');
         });
     }
 
-    addLines(lines: string[]): void {
+    addLines(lines: string[]): void
+    {
         this.statements.push(...lines);
     }
 
-    addFunction(func: string[]): void {
+    addFunction(func: string[]): void
+    {
         this.functions.push(func.join('\n'));
     }
 
-    addWaveform(name: string, waveform: any): void {
+    addWaveform(name: string, waveform: any): void
+    {
         if (!waveform) {
             this.statements.push('float ' + name + ' = 0.0;');
             return;
         }
         if (typeof (waveform.phase) == "number") {
-            waveform.phase = waveform.phase.toFixed(4)
+            waveform.phase = waveform.phase.toFixed(4);
         }
 
         let funcName = '';
@@ -285,7 +384,8 @@ class ShaderProgramBuilder {
         this.statements.push('float ' + name + ' = ' + waveform.base.toFixed(4) + ' + ' + funcName + '(' + waveform.phase + ' + time * ' + waveform.freq.toFixed(4) + ') * ' + waveform.amplitude.toFixed(4) + ';');
     }
 
-    addSquareFunc() {
+    addSquareFunc()
+    {
         this.addFunction([
             'float square(float val) {',
             '   return (mod(floor(val*2.0)+1.0, 2.0) * 2.0) - 1.0;',
@@ -294,7 +394,8 @@ class ShaderProgramBuilder {
     }
 
 
-    addTriangleFunc() {
+    addTriangleFunc()
+    {
         this.addFunction([
             'float triangle(float val) {',
             '   return abs(2.0 * fract(val) - 1.0);',
@@ -302,7 +403,8 @@ class ShaderProgramBuilder {
         ]);
     }
 
-    build(): string {
+    build(): string
+    {
         let source = '\
 #ifdef GL_ES \n\
 precision highp float; \n\
