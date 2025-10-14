@@ -216,7 +216,7 @@ function initEvents()
 }
 const effectSurfaces: { bspShader: BSPShader, glShader: GLShader; }[] = [];
 
-function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
+async function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
 {
     if (!map.bspObject.shaders) {
         return;
@@ -231,7 +231,7 @@ function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
                 // TODO: use default shader
             } else {
                 effectSurfaces.push({ bspShader, glShader });
-                glShaderManager.loadShaderMaps(gl, bspShader, glShader);
+                await glShaderManager.loadShaderMaps(gl, bspShader, glShader);
             }
         }
     }
@@ -259,7 +259,7 @@ async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3M
     const map = new Q3Map(gl, bspObject);
     await map.loadShaders();
     map.compileGeometry();
-    bindShaders(gl, map);
+    await bindShaders(gl, map);
     return map;
 }
 

@@ -288,7 +288,7 @@ export default class GlShaderManager
     setShaderStage(gl: WebGL2RenderingContext, shader: GLShader, stage: GLShaderStage, time: number): WebGLProgram
     {
 
-        if (stage.animFreq) {
+        if (stage.animFreq && stage.animTexture) {
             const animFrame = Math.floor(time * stage.animFreq) % stage.animTexture.length;
             stage.texture = stage.animTexture[animFrame];
         }
@@ -322,7 +322,7 @@ export default class GlShaderManager
         gl.uniform1i(program.uniform.texture, 0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
 
-        if (program.uniform.lightmap) {
+        if (program.uniform.lightmap && this.lightmap) {
             gl.activeTexture(gl.TEXTURE1);
             gl.uniform1i(program.uniform.lightmap, 1);
             gl.bindTexture(gl.TEXTURE_2D, this.lightmap);

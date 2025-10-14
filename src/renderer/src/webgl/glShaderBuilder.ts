@@ -50,6 +50,7 @@ export default class GlShaderBuilder
         for (let j = 0; j < shader.stages.length; ++j) {
             const stage = shader.stages[j];
             const glStage = {
+                ...stage,
                 texture: null,
                 blendSrc: this.translateBlend(stage.blendSrc),
                 blendDest: this.translateBlend(stage.blendDst),
