@@ -237,7 +237,7 @@ async function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
                     newShader.model = true;
                     modelSurfaces.push({ bspShader, glShader: newShader });
                 } else {
-                    effectSurfaces.push({ bspShader, glShader: newShader });
+                    defaultSurfaces.push({ bspShader, glShader: newShader });
                 }
             } else {
                 if (glShader.sky){
@@ -274,6 +274,18 @@ async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3M
     await map.loadShaders();
     map.compileGeometry();
     await bindShaders(gl, map);
+
+    const infoPlayerStart = bspObject.entities.find(ent => ent.classname === 'info_player_start');
+    playerMover.position = [
+            infoPlayerStart.origin[0],
+            infoPlayerStart.origin[1],
+            infoPlayerStart.origin[2]+30 // Start a little ways above the floor
+        ];
+
+        playerMover.velocity = [0,0,0];
+
+        zAngle = -(infoPlayerStart.angle || 0) * (3.1415/180) + (3.1415*0.5); // Negative angle in radians + 90 degrees
+        xAngle = 0;
     return map;
 }
 

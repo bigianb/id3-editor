@@ -1,6 +1,7 @@
 
 import { BSP } from '../../../../idlib/BspReader.types';
 import { Shader } from '../../../../idlib/Shaders.types';
+import { tesselate } from '../../../../idlib/Tesselation';
 import GlShaderBuilder, {GLShader} from './glShaderBuilder';
 
 const SurfaceType = {
@@ -57,8 +58,8 @@ export default class Q3Map
                 // TODO: lightmap adjust.
                 shader.surfaceType = surface.surfaceType;
                 if (surface.surfaceType === SurfaceType.MST_PATCH) {
-                    // convert beziers to mesh
-                    //geometry = this.getPatchGeometry(surface);
+                    // convert beziers to mesh. Tesselation level set to 5.
+                    tesselate(surface, this.bspObject.drawVerts, this.bspObject.drawIndices, 5);
                 }
             }
         }

@@ -68,6 +68,7 @@ export default class GlShaderManager
 {
 
     white: WebGLTexture | null = null;
+    lightmap: WebGLTexture | null = null;
     defaultTexture: WebGLTexture | null = null;;
     defaultProgram: WebGLProgram | null = null;
     modelProgram: WebGLProgram | null = null;
@@ -80,6 +81,7 @@ export default class GlShaderManager
         this.defaultProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_default_fragment);
         this.modelProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_model_fragment);
         this.defaultShader = this.buildDefault(gl);
+        this.lightmap = this.white;     // TODO
     }
 
     buildDefault(gl: WebGL2RenderingContext, surface?: BSPShader): GLShader
@@ -323,7 +325,7 @@ export default class GlShaderManager
         gl.uniform1i(program.uniform.texture, 0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
 
-        if (program.uniform.lightmap && this.lightmap) {
+        if (program.uniform.lightmap) {
             gl.activeTexture(gl.TEXTURE1);
             gl.uniform1i(program.uniform.lightmap, 1);
             gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
