@@ -17,6 +17,7 @@ export
     sort: number;
     sky: boolean;
     blend: boolean;
+    model: boolean;
     name: string;
     stages: GLShaderStage[];
     [key: string]: any;
@@ -44,6 +45,7 @@ export default class GlShaderBuilder
             sky: shader.sky,
             blend: shader.blend,
             name: shader.name,
+            model: false,
             stages: []
         };
 

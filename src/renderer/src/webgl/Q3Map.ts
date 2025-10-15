@@ -55,6 +55,7 @@ export default class Q3Map
                 const shader = this.bspObject.shaders[surface.shaderNum];
                 shader.surfaces.push(surface);
                 // TODO: lightmap adjust.
+                shader.surfaceType = surface.surfaceType;
                 if (surface.surfaceType === SurfaceType.MST_PATCH) {
                     // convert beziers to mesh
                     //geometry = this.getPatchGeometry(surface);
@@ -96,7 +97,7 @@ export default class Q3Map
                 shader.indexOffset = indices.length * 2; // Offset is in bytes
                 for(const surface of shader.surfaces) {
                     for(let k = 0; k < surface.numIndices; ++k) {
-                        indices.push(surface.firstIndex + this.bspObject.drawIndices[k]);
+                        indices.push(surface.firstVert + this.bspObject.drawIndices[surface.firstIndex + k]);
                     }
                     shader.indexCount += surface.numIndices;
                 }

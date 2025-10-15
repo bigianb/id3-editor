@@ -23,6 +23,7 @@ export type BSPSurface = {
 }
 
 export type BSPShader = {
+    surfaceType?: number;
     shader: string,
     surfaceFlags: number,
     contentFlags: number,

@@ -215,6 +215,8 @@ function initEvents()
 
 }
 const effectSurfaces: { bspShader: BSPShader, glShader: GLShader; }[] = [];
+const defaultSurfaces: { bspShader: BSPShader, glShader: GLShader; }[] = [];
+const modelSurfaces: { bspShader: BSPShader, glShader: GLShader; }[] = [];
 
 async function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
 {
@@ -222,15 +224,27 @@ async function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
         return;
     }
     effectSurfaces.length = 0;
+    defaultSurfaces.length = 0;
+    modelSurfaces.length = 0;
     // Loop though each of the bsp shaders and look-up the real
     // shader based on the name.
     for (const bspShader of map.bspObject.shaders) {
         if (bspShader.surfaces.length > 0) {
             const glShader = map.glShaders.get(bspShader.shader);
             if (!glShader) {
-                // TODO: use default shader
+                const newShader = glShaderManager.buildDefault(gl, bspShader);
+                if (bspShader?.surfaceType === 3){
+                    newShader.model = true;
+                    modelSurfaces.push({ bspShader, glShader: newShader });
+                } else {
+                    effectSurfaces.push({ bspShader, glShader: newShader });
+                }
             } else {
-                effectSurfaces.push({ bspShader, glShader });
+                if (glShader.sky){
+                    // TODO: sky
+                } else {
+                    effectSurfaces.push({ bspShader, glShader });
+                }
                 await glShaderManager.loadShaderMaps(gl, bspShader, glShader);
             }
         }
@@ -266,7 +280,7 @@ async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3M
 function initGL(gl: WebGL2RenderingContext)
 {
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.5, 0.5, 0.0, 1.0);
     gl.clearDepth(1.0);
 
     gl.enable(gl.DEPTH_TEST);
@@ -340,7 +354,25 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, map.indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, map.vertexBuffer);
 
-    console.log('drawing ' + effectSurfaces.length + ' surfaces');
+    if (defaultSurfaces.length > 0){
+        // Optimise the default shaders - we only need to do set-up once as they all use the same shader.
+        const defaultShader = glShaderManager.defaultShader;
+        glShaderManager.setShader(gl, defaultShader);
+        const shaderProgram = glShaderManager.setShaderStage(gl, defaultShader, defaultShader.stages[0], event.elapsed / 1000);
+        bindShaderAttribs(gl, shaderProgram);
+        bindShaderMatrix(gl, shaderProgram, viewMatrix, projectionMatrix);
+        gl.activeTexture(gl.TEXTURE0);
+        for (const { bspShader, glShader } of defaultSurfaces) {
+            const stage = glShader.stages[0];
+            gl.bindTexture(gl.TEXTURE_2D, stage.texture);
+            gl.drawElements(gl.TRIANGLES, bspShader.indexCount / 3, gl.UNSIGNED_SHORT, bspShader.indexOffset);
+        }
+    }
+    // TODO: same with model surfaces...
+    if (modelSurfaces.length > 0){
+        console.log('skipping ' + modelSurfaces.length + 'surfaces');
+    }
+
     for (const { bspShader, glShader } of effectSurfaces) {
 
         if (bspShader.surfaces.length == 0 /*|| surface.visible !== true*/) {
@@ -352,7 +384,6 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
         if (glShader.stages.length === 0){
             console.log('shader ' + bspShader.shader + ' has no stages');
         }
-        //console.log('drawing ' + bspShader.indexCount / 3 + ' triangles using shader ' + bspShader.shader);
         for (const stage of glShader.stages) {
             const shaderProgram = glShaderManager.setShaderStage(gl, glShader, stage, event.elapsed / 1000);
             if (!shaderProgram) {
@@ -361,7 +392,7 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
             }
             bindShaderAttribs(gl, shaderProgram);
             bindShaderMatrix(gl, shaderProgram, viewMatrix, projectionMatrix);
-            // Draw all geometry that uses this textures
+            // Draw all geometry that uses this texture
             
             gl.drawElements(gl.TRIANGLES, bspShader.indexCount / 3, gl.UNSIGNED_SHORT, bspShader.indexOffset);
         }

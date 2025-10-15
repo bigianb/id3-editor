@@ -42,6 +42,7 @@ const q3bsp_default_fragment = '\
         vec4 diffuseColor = texture2D(texture, vTexCoord); \n\
         vec4 lightColor = texture2D(lightmap, vLightmapCoord); \n\
         gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a); \n\
+        gl_FragColor = vec4(diffuseColor.rgb, diffuseColor.a); \n\
     } \n\
 ';
 
@@ -117,8 +118,8 @@ export default class GlShaderManager
                 await this.loadTexture(gl, surface, stage);
             }
 
-            if(stage.shaderSrc && !stage.program) {
-                stage.program = this.compileShaderProgram(gl, stage.shaderSrc.vertex, stage.shaderSrc.fragment);
+            if(stage.vertexShaderSource && !stage.program) {
+                stage.program = this.compileShaderProgram(gl, stage.vertexShaderSource, stage.fragmentShaderSource);
             }
         }
     }
