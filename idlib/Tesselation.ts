@@ -56,6 +56,18 @@ function tesselate(face: BSPSurface, verts: BSPVertex[], indices: number[], leve
     face.numVerts = 0;
     face.numIndices = 0;
 
+    /*
+    let i=off;
+    const outtxt:BSPVertex[] = [];
+    for (let y=0; y < face.patchHeight; ++y){
+        for (let x=0; x < face.patchWidth; ++x){
+            const v = verts[i++];
+            outtxt.push(v);
+        }
+    }
+    console.log(JSON.stringify(outtxt));
+*/
+
     for (let py = 0; py < face.patchHeight - 2; py += 2) {
         for (let px = 0; px < face.patchWidth - 2; px += 2) {
 

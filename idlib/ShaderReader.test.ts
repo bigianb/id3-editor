@@ -30,7 +30,7 @@ myShader
 }
 `;
             const buffer = Buffer.from(shaderText, 'utf-8');
-            const result = shaderReader.parseShader(buffer);
+            const result = shaderReader.extractShaders(buffer);
 
             expect(result).toBeInstanceOf(Map);
             expect(result).not.toBeNull();
@@ -40,7 +40,7 @@ myShader
             expect(shader.name).toBe('myShader');
             expect(shader.params).toEqual(['param1', 'param2', 'param3']);
             expect(shader.stages.length).toBe(1);
-            expect(shader.stages[0]).toEqual(['stageParam1', 'stageParam2']);
+            expect(shader.stages[0].lines).toEqual(['stageParam1', 'stageParam2']);
         });
 
         it('deals with bad rtcw shader', () => {
@@ -60,7 +60,7 @@ myShader
 }
 `;
             const buffer = Buffer.from(shaderText, 'utf-8');
-            const result = shaderReader.parseShader(buffer);
+            const result = shaderReader.extractShaders(buffer);
 
             expect(result).toBeInstanceOf(Map);
             expect(result).not.toBeNull();
@@ -70,8 +70,8 @@ myShader
             expect(shader.name).toBe('myShader');
             expect(shader.params).toEqual(['param1', 'param2', 'param3']);
             expect(shader.stages.length).toBe(2);
-            expect(shader.stages[0]).toEqual(['stageParam1', 'stageParam2']);
-            expect(shader.stages[1]).toEqual(['stageParam3']);
+            expect(shader.stages[0].lines).toEqual(['stageParam1', 'stageParam2']);
+            expect(shader.stages[1].lines).toEqual(['stageParam3']);
         });
 
         it('deals with rtcw shader where open brace is on the same line', () => {
@@ -90,7 +90,7 @@ myShader
 }
 `;
             const buffer = Buffer.from(shaderText, 'utf-8');
-            const result = shaderReader.parseShader(buffer);
+            const result = shaderReader.extractShaders(buffer);
 
             expect(result).toBeInstanceOf(Map);
             expect(result).not.toBeNull();
@@ -100,8 +100,8 @@ myShader
             expect(shader.name).toBe('myShader');
             expect(shader.params).toEqual(['param1', 'param2', 'param3']);
             expect(shader.stages.length).toBe(2);
-            expect(shader.stages[0]).toEqual(['stageParam1', 'stageParam2']);
-            expect(shader.stages[1]).toEqual(['stageParam3']);
+            expect(shader.stages[0].lines).toEqual(['stageParam1', 'stageParam2']);
+            expect(shader.stages[1].lines).toEqual(['stageParam3']);
         });
 
         it('skips comments and empty lines', () => {
@@ -119,13 +119,13 @@ myShader
 }
 `;
             const buffer = Buffer.from(shaderText, 'utf-8');
-            const result = shaderReader.parseShader(buffer);
+            const result = shaderReader.extractShaders(buffer);
             expect(result).not.toBeNull();
             expect(result.has('myShader')).toBe(true);
             const shader = result.get('myShader');
             expect(shader.params).toEqual(['param1']);
             expect(shader.stages.length).toBe(1);
-            expect(shader.stages[0]).toEqual(['stageParam1']);
+            expect(shader.stages[0].lines).toEqual(['stageParam1']);
         });
 
         it('returns null on unexpected depth', () => {
@@ -137,7 +137,7 @@ unexpectedLine
 }
 `;
             const buffer = Buffer.from(shaderText, 'utf-8');
-            const result = shaderReader.parseShader(buffer);
+            const result = shaderReader.extractShaders(buffer);
             expect(result).toBeNull();
         });
 
@@ -156,14 +156,14 @@ shaderB
 }
 `;
             const buffer = Buffer.from(shaderText, 'utf-8');
-            const result = shaderReader.parseShader(buffer);
+            const result = shaderReader.extractShaders(buffer);
             expect(result).not.toBeNull();
             expect(result.has('shaderA')).toBe(true);
             expect(result.has('shaderB')).toBe(true);
 
             expect(result.get('shaderA').params).toEqual(['paramA']);
             expect(result.get('shaderB').params).toEqual(['paramB']);
-            expect(result.get('shaderB').stages[0]).toEqual(['stageB']);
+            expect(result.get('shaderB').stages[0].lines).toEqual(['stageB']);
         });
     });
 
@@ -189,7 +189,7 @@ shaderA
 `;
             fileSystemMock.readFile.mockResolvedValue(Buffer.from(shaderText, 'utf-8'));
             const result = await shaderReader.load('shaderA.shader');
-            expect(result).not.toBeNull();
+            expect(result).not.toBeUndefined();
             expect(result).toBeInstanceOf(Map);
             expect(result.has('shaderA')).toBe(true);
         });

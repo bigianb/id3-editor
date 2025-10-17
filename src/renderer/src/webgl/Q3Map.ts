@@ -59,7 +59,8 @@ export default class Q3Map
                 shader.surfaceType = surface.surfaceType;
                 if (surface.surfaceType === SurfaceType.MST_PATCH) {
                     // convert beziers to mesh. Tesselation level set to 5.
-                    tesselate(surface, this.bspObject.drawVerts, this.bspObject.drawIndices, 5);
+                    const tesselationLevel = 5;
+                    tesselate(surface, this.bspObject.drawVerts, this.bspObject.drawIndices, tesselationLevel);
                 }
             }
         }
