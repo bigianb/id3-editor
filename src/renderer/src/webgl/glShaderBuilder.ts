@@ -137,6 +137,7 @@ export default class GlShaderBuilder
         }
 
         builder.addLines(['vec3 defPosition = position;']);
+
         for (const [i, deform] of shader.vertexDeforms.entries()) {
             switch (deform.type) {
                 case 'wave':
@@ -314,6 +315,8 @@ export default class GlShaderBuilder
         }
 */
         builder.addLines(['gl_FragColor = vec4(rgb, alpha);']);
+        //builder.addLines(['gl_FragColor = vec4(rgb, 1.0);']);
+        //builder.addLines(['gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);']);
         return builder.build();
     }
 

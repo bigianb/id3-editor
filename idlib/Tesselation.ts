@@ -44,9 +44,32 @@ function xyzToVec3(xyz:{x:number, y:number, z:number}):vec3
     return [xyz.x, xyz.y, xyz.z];
 }
 
+function simpleTriangulation(face: BSPSurface, indices: number[])
+{
+    face.firstIndex = indices.length;
+    for (let row = 0; row < face.patchHeight - 1; ++row) {
+        const v0 = face.firstVert + row * face.patchWidth;
+        const v1 = v0 + face.patchWidth;
+        for (let col = 0; col < face.patchWidth - 1; ++col) {
+            indices.push(v0 + col);
+            indices.push(v0 + col + 1);
+            indices.push(v1 + col);
+            
+            indices.push(v1 + col);
+            indices.push(v0 + col + 1);
+            indices.push(v1 + col + 1);
+        }
+    }
+}
+
 export
 function tesselate(face: BSPSurface, verts: BSPVertex[], indices: number[], level: number)
 {
+    if (level === 0){
+        simpleTriangulation(face, indices);
+        return;
+    }
+
     const off = face.firstVert;
     const L1 = level + 1;
 

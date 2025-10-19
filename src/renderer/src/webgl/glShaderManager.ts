@@ -29,6 +29,7 @@ const q3bsp_default_vertex = '\
     } \n\
 ';
 
+
 const q3bsp_default_fragment = '\
     #ifdef GL_ES \n\
     precision highp float; \n\
@@ -41,11 +42,27 @@ const q3bsp_default_fragment = '\
     void main(void) { \n\
         vec4 diffuseColor = texture2D(texture, vTexCoord); \n\
         vec4 lightColor = texture2D(lightmap, vLightmapCoord); \n\
-        gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a); \n\
+        //gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a); \n\
         gl_FragColor = vec4(diffuseColor.rgb, diffuseColor.a); \n\
     } \n\
 ';
-
+/*
+const q3bsp_default_fragment = '\
+    #ifdef GL_ES \n\
+    precision highp float; \n\
+    #endif \n\
+    varying vec2 vTexCoord; \n\
+    varying vec2 vLightmapCoord; \n\
+    uniform sampler2D texture; \n\
+    uniform sampler2D lightmap; \n\
+\n\
+    void main(void) { \n\
+        vec4 diffuseColor = texture2D(texture, vTexCoord); \n\
+        vec4 lightColor = texture2D(lightmap, vLightmapCoord); \n\
+        gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0); \n\
+    } \n\
+';
+*/
 const q3bsp_model_fragment = '\
     #ifdef GL_ES \n\
     precision highp float; \n\
@@ -108,7 +125,8 @@ export default class GlShaderManager
             sort: 3,
             stages: [diffuseStage],
             sky: false,
-            name: 'default'
+            name: 'default',
+            model: false
         };
 
         return glShader;
@@ -194,6 +212,7 @@ export default class GlShaderManager
     {
         const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         if (!fragmentShader) {
+            console.error('Failed to create fragment shader');
             return null;
         }
         gl.shaderSource(fragmentShader, fragmentSrc);
@@ -210,6 +229,7 @@ export default class GlShaderManager
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
         if (!vertexShader) {
             gl.deleteShader(fragmentShader);
+            console.error('Failed to create vertex shader');
             return null;
         }
         gl.shaderSource(vertexShader, vertexSrc);
@@ -238,20 +258,22 @@ export default class GlShaderManager
             return null;
         }
 
-        let i, attrib, uniform;
         const attribCount = gl.getProgramParameter(shaderProgram, gl.ACTIVE_ATTRIBUTES);
         shaderProgram.attrib = {};
-        for (i = 0; i < attribCount; i++) {
-            attrib = gl.getActiveAttrib(shaderProgram, i);
+        for (let i = 0; i < attribCount; i++) {
+            const attrib = gl.getActiveAttrib(shaderProgram, i);
             shaderProgram.attrib[attrib.name] = gl.getAttribLocation(shaderProgram, attrib.name);
         }
 
         const uniformCount = gl.getProgramParameter(shaderProgram, gl.ACTIVE_UNIFORMS);
         shaderProgram.uniform = {};
-        for (i = 0; i < uniformCount; i++) {
-            uniform = gl.getActiveUniform(shaderProgram, i);
+        for (let i = 0; i < uniformCount; i++) {
+            const uniform = gl.getActiveUniform(shaderProgram, i);
             shaderProgram.uniform[uniform.name] = gl.getUniformLocation(shaderProgram, uniform.name);
         }
+
+        //console.log(shaderProgram.attrib);
+        //console.log(shaderProgram.uniform);
 
         return shaderProgram;
     }
@@ -278,6 +300,8 @@ export default class GlShaderManager
         } else {
             gl.disable(gl.CULL_FACE);
         }
+        // IJB: DEBUGGING
+        gl.disable(gl.CULL_FACE);
     }
 
     /**

@@ -25,7 +25,7 @@ function onResize()
         canvas.width = canvas.clientWidth * devicePixelRatio;
         canvas.height = canvas.clientHeight * devicePixelRatio;
     }
-    if (canvas.width > 0 && canvas.height > 0){
+    if (canvas.width > 0 && canvas.height > 0) {
         glContext?.viewport(0, 0, canvas.width, canvas.height);
         mat4.perspective(projectionMatrix, 45.0, canvas.width / canvas.height, 1.0, 4096.0);
     }
@@ -230,17 +230,20 @@ async function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
     // shader based on the name.
     for (const bspShader of map.bspObject.shaders) {
         if (bspShader.surfaces.length > 0) {
+            if (bspShader.shader.endsWith('nodraw') || bspShader.shader.endsWith('caulk')){
+                continue;
+            }
             const glShader = map.glShaders.get(bspShader.shader);
             if (!glShader) {
                 const newShader = glShaderManager.buildDefault(gl, bspShader);
-                if (bspShader?.surfaceType === 3){
+                if (bspShader?.surfaceType === 3) {
                     newShader.model = true;
                     modelSurfaces.push({ bspShader, glShader: newShader });
                 } else {
                     defaultSurfaces.push({ bspShader, glShader: newShader });
                 }
             } else {
-                if (glShader.sky){
+                if (glShader.sky) {
                     // TODO: sky
                 } else {
                     effectSurfaces.push({ bspShader, glShader });
@@ -277,15 +280,15 @@ async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3M
 
     const infoPlayerStart = bspObject.entities.find(ent => ent.classname === 'info_player_start');
     playerMover.position = [
-            infoPlayerStart.origin[0],
-            infoPlayerStart.origin[1],
-            infoPlayerStart.origin[2]+30 // Start a little ways above the floor
-        ];
+        infoPlayerStart.origin[0],
+        infoPlayerStart.origin[1],
+        infoPlayerStart.origin[2] + 30 // Start a little ways above the floor
+    ];
 
-        playerMover.velocity = [0,0,0];
+    playerMover.velocity = [0, 0, 0];
 
-        zAngle = -(infoPlayerStart.angle || 0) * (3.1415/180) + (3.1415*0.5); // Negative angle in radians + 90 degrees
-        xAngle = 0;
+    zAngle = -(infoPlayerStart.angle || 0) * (3.1415 / 180) + (3.1415 * 0.5); // Negative angle in radians + 90 degrees
+    xAngle = 0;
     return map;
 }
 
@@ -350,6 +353,24 @@ function bindShaderAttribs(gl: WebGL2RenderingContext, shader: WebGLProgram)
     }
 }
 
+function renderDefaultSurfaces(gl: WebGL2RenderingContext, viewMatrix: mat4, elapsed: number, surfaces)
+{
+    if (surfaces.length > 0 && glShaderManager.defaultShader !== null) {
+        // Optimise the default shaders - we only need to do set-up once as they all use the same shader.
+        const defaultShader = glShaderManager.defaultShader;
+        glShaderManager.setShader(gl, defaultShader);
+        const shaderProgram = glShaderManager.setShaderStage(gl, defaultShader, defaultShader.stages[0], elapsed / 1000);
+        bindShaderAttribs(gl, shaderProgram);
+        bindShaderMatrix(gl, shaderProgram, viewMatrix, projectionMatrix);
+        gl.activeTexture(gl.TEXTURE0);
+        for (const { bspShader, glShader } of surfaces) {
+            const stage = glShader.stages[0];
+            gl.bindTexture(gl.TEXTURE_2D, stage.texture);
+            gl.drawElements(gl.TRIANGLES, bspShader.indexCount / 3, gl.UNSIGNED_SHORT, bspShader.indexOffset);
+        }
+    }
+}
+
 function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, elapsed: number, frameTime: number; })
 {
     gl.depthMask(true);
@@ -366,34 +387,26 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, map.indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, map.vertexBuffer);
 
-    if (defaultSurfaces.length > 0){
-        // Optimise the default shaders - we only need to do set-up once as they all use the same shader.
-        const defaultShader = glShaderManager.defaultShader;
-        glShaderManager.setShader(gl, defaultShader);
-        const shaderProgram = glShaderManager.setShaderStage(gl, defaultShader, defaultShader.stages[0], event.elapsed / 1000);
-        bindShaderAttribs(gl, shaderProgram);
-        bindShaderMatrix(gl, shaderProgram, viewMatrix, projectionMatrix);
-        gl.activeTexture(gl.TEXTURE0);
-        for (const { bspShader, glShader } of defaultSurfaces) {
-            const stage = glShader.stages[0];
-            gl.bindTexture(gl.TEXTURE_2D, stage.texture);
-            gl.drawElements(gl.TRIANGLES, bspShader.indexCount / 3, gl.UNSIGNED_SHORT, bspShader.indexOffset);
-        }
-    }
+    renderDefaultSurfaces(gl, viewMatrix, event.elapsed, defaultSurfaces);
+
     // TODO: same with model surfaces...
-    if (modelSurfaces.length > 0){
-        console.log('skipping ' + modelSurfaces.length + 'surfaces');
+    if (modelSurfaces.length > 0) {
+       // console.log('skipping ' + modelSurfaces.length + ' model surfaces');
     }
+
+    //renderDefaultSurfaces(gl, viewMatrix, event.elapsed, effectSurfaces);
 
     for (const { bspShader, glShader } of effectSurfaces) {
 
-        if (bspShader.surfaces.length == 0 /*|| surface.visible !== true*/) {
+        if (bspShader.surfaces.length == 0
+            // || surface.visible !== true
+        ) {
             console.log('shader ' + bspShader.shader + ' has no surfaces');
             continue;
         }
 
         glShaderManager.setShader(gl, glShader);
-        if (glShader.stages.length === 0){
+        if (glShader.stages.length === 0) {
             console.log('shader ' + bspShader.shader + ' has no stages');
         }
         for (const stage of glShader.stages) {
@@ -405,7 +418,7 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
             bindShaderAttribs(gl, shaderProgram);
             bindShaderMatrix(gl, shaderProgram, viewMatrix, projectionMatrix);
             // Draw all geometry that uses this texture
-            
+
             gl.drawElements(gl.TRIANGLES, bspShader.indexCount / 3, gl.UNSIGNED_SHORT, bspShader.indexOffset);
         }
     }
