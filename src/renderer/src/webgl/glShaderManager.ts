@@ -91,17 +91,17 @@ export default class GlShaderManager
     modelProgram: WebGLProgram | null = null;
     defaultShader: GLShader | null = null;
 
-    init(gl: WebGL2RenderingContext)
+    async init(gl: WebGL2RenderingContext)
     {
         this.white = this.createSolidTexture(gl, [255, 255, 255, 255]);
         this.defaultTexture = this.white;
         this.defaultProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_default_fragment);
         this.modelProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_model_fragment);
-        this.defaultShader = this.buildDefault(gl);
+        this.defaultShader = await this.buildDefault(gl);
         this.lightmap = this.white;     // TODO
     }
 
-    buildDefault(gl: WebGL2RenderingContext, surface?: BSPShader): GLShader
+    async buildDefault(gl: WebGL2RenderingContext, surface?: BSPShader): Promise<GLShader>
     {
         const diffuseStage: GLShaderStage = {
             map: (surface ? surface.shader + '.png' : null),
@@ -114,7 +114,7 @@ export default class GlShaderManager
         };
 
         if (surface) {
-            this.loadTexture(gl, surface, diffuseStage);
+            await this.loadTexture(gl, surface, diffuseStage);
         } else {
             diffuseStage.texture = this.defaultTexture;
         }
@@ -147,6 +147,7 @@ export default class GlShaderManager
     async loadTexture(gl: WebGL2RenderingContext, surface: BSPShader, stage: GLShaderStage)
     {
         if (!stage.map) {
+            console.warn('No map for stage in shader: ' + surface.shader);
             stage.texture = this.white;
             return;
         } else if (stage.map === '$lightmap') {
@@ -175,6 +176,7 @@ export default class GlShaderManager
     {
         const imageFSName = await findImage(name);
         if (!imageFSName){
+            console.warn('Could not find image: ' + name);
             return this.defaultTexture;
         }
         const fileData = await basefs.load(imageFSName);
@@ -196,6 +198,9 @@ export default class GlShaderManager
             const loader = new TGALoader();
             const tgaTex = loader.parse(fileData);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, tgaTex.width, tgaTex.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, tgaTex.data);
+        } else {
+            console.warn('Unsupported image format: ' + imageFSName);
+            return this.defaultTexture;
         }
 
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -283,7 +288,7 @@ export default class GlShaderManager
         const data = new Uint8Array(colour);
         const texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, data);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         return texture;

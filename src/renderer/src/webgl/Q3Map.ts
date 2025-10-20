@@ -51,12 +51,13 @@ export default class Q3Map
 
     compileGeometry()
     {
+        console.log('Compiling Q3 map geometry');
         if (!this.bspObject.surfaces || !this.bspObject.drawVerts || !this.bspObject.drawIndices || !this.bspObject.shaders) {
             return;
         }
 
         for (const surface of this.bspObject.surfaces) {
-            if ([SurfaceType.MST_PATCH, SurfaceType.MST_PLANAR, SurfaceType.MST_TRIANGLE_SOUP].includes(surface.surfaceType)) {
+            if ([/*SurfaceType.MST_PATCH,*/ SurfaceType.MST_PLANAR, SurfaceType.MST_TRIANGLE_SOUP].includes(surface.surfaceType)) {
                 // Add this surface to the relevant shader
                 const shader = this.bspObject.shaders[surface.shaderNum];
                 shader.surfaces.push(surface);
@@ -98,10 +99,12 @@ export default class Q3Map
             vertices[offset++] = vert.colour[3] / 255.0;
         }
 
+        let numProcessedSurfaces = 0;
         // Organise the indices so that they are grouped by shader.
         const indices: number[] = [];
         for (const shader of this.bspObject.shaders) {
             if (shader.surfaces.length > 0) {
+                numProcessedSurfaces += shader.surfaces.length;
                 shader.indexCount = 0;
                 shader.indexOffset = indices.length * 2; // Offset is in bytes
                 for (const surface of shader.surfaces) {
@@ -122,5 +125,7 @@ export default class Q3Map
         this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.gl.STATIC_DRAW);
 
         this.indexCount = indices.length;
+        console.log(`Compiled ${this.indexCount} indices from ${this.bspObject.drawIndices.length} draw indices.`);
+        console.log(`Processed ${numProcessedSurfaces} surfaces from ${this.bspObject.surfaces.length} total surfaces.`);
     }
 }

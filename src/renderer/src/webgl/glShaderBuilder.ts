@@ -269,7 +269,7 @@ export default class GlShaderBuilder
 
         switch (stage.alphaGen) {
             case 'wave':
-                // TODO builder.addWaveform('alpha', stage.alphaWaveform);
+                builder.addWaveform('alpha', stage.alphaWaveform);
                 break;
             case 'lightingspecular':
                 // For now this is VERY special cased. May not work well with all instances of lightingSpecular
@@ -291,7 +291,6 @@ export default class GlShaderBuilder
                 builder.addLines(['float alpha = texColor.a;']);
                 break;
         }
-        /* TODO
         if (stage.alphaFunc) {
             switch (stage.alphaFunc) {
                 case 'GT0':
@@ -313,10 +312,8 @@ export default class GlShaderBuilder
                     break;
             }
         }
-*/
         builder.addLines(['gl_FragColor = vec4(rgb, alpha);']);
-        //builder.addLines(['gl_FragColor = vec4(rgb, 1.0);']);
-        //builder.addLines(['gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);']);
+
         return builder.build();
     }
 

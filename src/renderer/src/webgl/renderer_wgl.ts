@@ -232,18 +232,15 @@ async function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
     // shader based on the name.
     for (const bspShader of map.bspObject.shaders) {
         if (bspShader.surfaces.length > 0) {
-            if (bspShader.shader.endsWith('nodraw') || bspShader.shader.endsWith('caulk')){
-                continue;
-            }
             const glShader = map.glShaders.get(bspShader.shader);
             if (!glShader) {
-                const newShader = glShaderManager.buildDefault(gl, bspShader);
-                if (bspShader?.surfaceType === 3) {
-                    newShader.model = true;
-                    modelSurfaces.push({ bspShader, glShader: newShader });
-                } else {
+                const newShader = await glShaderManager.buildDefault(gl, bspShader);
+//                if (bspShader?.surfaceType === 3) {
+//                    newShader.model = true;
+//                    modelSurfaces.push({ bspShader, glShader: newShader });
+//                } else {
                     defaultSurfaces.push({ bspShader, glShader: newShader });
-                }
+//                }
             } else {
                 if (glShader.sky) {
                     // TODO: sky
@@ -269,7 +266,7 @@ const glShaderManager = new GlShaderManager();
 
 async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3Map>
 {
-    glShaderManager.init(gl);
+    await glShaderManager.init(gl);
     const titleEl = document.getElementById("mapTitle");
     if (titleEl) {
         titleEl.innerHTML = mapName + ".bsp";
@@ -367,6 +364,10 @@ function renderDefaultSurfaces(gl: WebGL2RenderingContext, viewMatrix: mat4, ela
         gl.activeTexture(gl.TEXTURE0);
         for (const { bspShader, glShader } of surfaces) {
             const stage = glShader.stages[0];
+            if (!stage.texture) {
+                console.warn('no texture for ' + bspShader.shader);
+                continue;
+            }
             gl.bindTexture(gl.TEXTURE_2D, stage.texture);
             gl.drawElements(gl.TRIANGLES, bspShader.indexCount / 3, gl.UNSIGNED_SHORT, bspShader.indexOffset);
         }

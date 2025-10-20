@@ -259,6 +259,8 @@ export default class ShaderReader {
                 break;
             case 'clampmap':
                 stage.clamp = true;
+                stage.map = parts[1];
+                stage.isLightmap = stage.map === '$lightmap';
                 break;
             case 'depthfunc':
                 stage.depthFunc = parts[1]?.toLowerCase();
@@ -397,7 +399,13 @@ export default class ShaderReader {
                 depth--;
                 if (depth === 0) {
                     currentShader = null;
-                } else if (depth === 1) {
+                } else if (depth === 1 && currentStage !== null) {
+                    if (currentStage.blendSrc === 'GL_ONE' && currentStage.blendDst === 'GL_ZERO') {
+                        currentStage.hasBlendFunc = false;
+                        currentStage.depthWrite = true;
+                    }
+
+                    currentStage.isLightmap = currentStage.map === '$lightmap';
                     currentStage = null;
                 }
             } else if (depth === 1) {
