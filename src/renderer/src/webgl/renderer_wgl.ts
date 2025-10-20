@@ -32,7 +32,7 @@ function onResize()
 }
 
 const pressed = new Set<string>();
-const cameraMat = mat4.create();
+
 let zAngle = 3;
 let xAngle = 0;
 
@@ -58,7 +58,7 @@ function moveLookLocked(xDelta: number, yDelta: number)
 function moveViewOriented(dir: number[], frameTime: number)
 {
     if (dir[0] !== 0 || dir[1] !== 0 || dir[2] !== 0) {
-        mat4.identity(cameraMat);
+        const cameraMat = mat4.create();
         mat4.rotateZ(cameraMat, cameraMat, zAngle);
         mat4.invert(cameraMat, cameraMat);
         vec3.transformMat4(dir, dir, cameraMat);
@@ -88,6 +88,8 @@ function initEvents()
             event.key === 's' ||
             event.key === 'a' ||
             event.key === 'd' ||
+            event.key === 'r' ||
+            event.key === 'f' ||
             event.key === ' ') && !event.ctrlKey) {
             event.preventDefault();
         }
@@ -371,8 +373,40 @@ function renderDefaultSurfaces(gl: WebGL2RenderingContext, viewMatrix: mat4, ela
     }
 }
 
+function updateInput(frameTime: number) {
+    const dir = [0, 0, 0];
+    // This is our first person movement code. It's not really pretty, but it works
+    if(pressed.has('w')) {
+        dir[1] += 1;
+    }
+    if(pressed.has('s')) {
+        dir[1] -= 1;
+    }
+    if(pressed.has('a')) {
+        dir[0] -= 1;
+    }
+    if(pressed.has('d')) {
+        dir[0] += 1;
+    }
+    // Vertical movement for flying
+    if(pressed.has('r')) {
+        dir[2] += 1;
+    }
+    if(pressed.has('f')) {
+        dir[2] -= 1;
+    }
+    moveViewOriented(dir, frameTime);
+}
+
+let accumInputFt = 0;   // bit hacky way to get a fixed timestep for input
 function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, elapsed: number, frameTime: number; })
 {
+    accumInputFt += event.frameTime;
+    while(accumInputFt >= 16) {
+        updateInput(16);
+        accumInputFt -= 16;
+    }
+
     gl.depthMask(true);
     const viewMatrix = mat4.create();
     getViewMatrix(viewMatrix);
@@ -435,6 +469,7 @@ function renderLoop(gl: WebGL2RenderingContext, map: Q3Map)
 
         if (startTime === 0) {
             startTime = now;
+            lastFrameTime = now;
         }
         const elapsed = now - startTime;
         const frameTime = now - lastFrameTime;

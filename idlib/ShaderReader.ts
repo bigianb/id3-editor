@@ -79,10 +79,13 @@ export default class ShaderReader {
                     case 'portal': shader.sort = 1; break;
                     case 'sky': shader.sort = 2; break;
                     case 'opaque': shader.sort = 3; break;
+                    case 'decal': shader.sort = 4; break;
+                    case 'seethrough': shader.sort = 5; break;
                     case 'banner': shader.sort = 6; break;
                     case 'underwater': shader.sort = 8; break;
                     case 'additive': shader.sort = 9; break;
                     case 'nearest': shader.sort = 16; break;
+                    
                     default: console.warn('Unknown sort value:', param1); break;
                 };
             }
@@ -96,6 +99,10 @@ export default class ShaderReader {
             shader.surfaceParams.add(param1);
             return;
         }
+        if (param0 === 'spritegen' && parts.length > 1) {
+            shader.spritegen = parts[1].toLowerCase();
+            return;
+        }
         if (param0 === 'qer_editorimage') {
             shader.editorImage = parts[1];
             return;
@@ -106,6 +113,10 @@ export default class ShaderReader {
         }
         if (param0 == 'portal') {
             shader.portal = true;
+            return;
+        }
+        if (param0 == 'portalsky') {
+            shader.portalSky = true;
             return;
         }
         if (param0 === 'nomipmap' || param0 === 'nomipmaps') {
@@ -132,7 +143,7 @@ export default class ShaderReader {
             shader.polygonOffset = true;
             return;
         }
-        if (param0 === 'deformvertexes' && parts.length > 2) {
+        if (param0 === 'deformvertexes' && parts.length > 1) {
             const type = parts[1].toLowerCase();
 
             switch (type) {
@@ -146,15 +157,39 @@ export default class ShaderReader {
                         shader.vertexDeforms.push(deform);
                     }
                     break;
+                case 'autosprite':
+                case 'autosprite2':
+                case 'bulge':
+                case 'move':
+                case 'normal':
+                case 'projectionshadow':
+                case 'wavenormal':
+                    // TODO: implement other deform types
+                    break;
                 default: {
                     console.warn('Unknown deform type:', type);
                 }
             }
             return
         }
-        if (param0 === 'fogparms' || param0 === 'fogvars' || param0 === 'skyfogvars') {
+        if (param0 === 'fogonly' || param0 === 'fogparms' || param0 === 'fogvars' || param0 === 'skyfogvars') {
             // TODO: handle fogparms
             return;
+        }
+        if (param0 === 'skyparms'){
+            // TODO: Alice thing - need to figure out how to deal with it.
+            return;
+        }
+        if (param0 === 'surfacecolor'){
+            // TODO: Alice sky thing - need to figure out how to deal with it.
+            return;
+        }
+        if (param0 === 'surfacelight'){
+            // TODO: Alice lava thing - need to figure out how to deal with it.
+            return;
+        }
+        if (param0 === 'tesssize'){
+            return; // RTCW ignores this. Probably editor specific.
         }
         if (param0.startsWith('q3map_')) {
             // Ignore q3map specific parameters
@@ -173,6 +208,22 @@ export default class ShaderReader {
         const parts = line.split(/\s+/);
         const param0 = parts[0].toLowerCase();
         switch (param0) {
+            case 'alphafunc':
+                stage.alphaFunc = parts[1]?.toUpperCase();
+                break;
+            case 'alphagen':
+                stage.alphaGen = parts[1]?.toLowerCase();
+                switch(stage.alphaGen) {
+                    case 'wave':
+                        stage.alphaWaveform = this.parseWaveform(parts.slice(2));
+                        if(!stage.alphaWaveform) { stage.alphaGen = '1.0'; }
+                        break;
+                    default: break;
+                };
+                break;
+            case 'alphatest':
+                stage.alphaTest = { operator: parts[1]?.toLowerCase(), value: parseFloat(parts[2]) };
+                break;
             case 'animmap':
             case 'animmapcomp':
                 stage.map = 'anim';
@@ -216,6 +267,9 @@ export default class ShaderReader {
                 stage.depthWrite = true;
                 stage.depthWriteOverride = true;
                 break;
+            case 'detail':
+                stage.detail = true;
+                break;
             case 'map':
             case 'mapcomp':
                 stage.map = parts[1];
@@ -223,6 +277,9 @@ export default class ShaderReader {
                 break;
             case 'mapnocomp':
                 // skip textures for no compression. They are just small versions of the mapcomp.
+                break;
+            case 'nodepthtest':
+                stage.noDepthTest = true;
                 break;
             case 'rgbgen':
                 stage.rgbGen = parts[1]?.toLowerCase();
@@ -282,6 +339,8 @@ export default class ShaderReader {
                     surfaceParams: new Set<string>(),
                     cull: 'back',
                     sky: false,
+                    portal: false,
+                    portalSky: false,
                     noPicmip: false,
                     noMipMap: false,
                     noFog: false,
@@ -310,11 +369,14 @@ export default class ShaderReader {
                     currentStage = {
                         clamp: false,
                         isLightmap: false,
+                        detail: false,
+                        noDepthTest: false,
                         tcMods: [],
                         tcGen: 'base',
                         rgbGen: 'identity',
                         rgbWaveform: null,
                         alphaGen: '1.0',
+                        alphaWaveform: null,
                         blendSrc: 'GL_ONE', 
                         blendDst: 'GL_ZERO',
                         hasBlendFunc: false,

@@ -24,14 +24,19 @@ export interface ShaderStage
     hasBlendFunc: boolean;
     blendSrc: string;
     blendDst: string;
-    rgbGen: string;
     alphaGen?: string;
+    alphaWaveform: any;
+    alphaTest?: {operator: string, value: number};
+    alphaFunc?: string;
+    rgbGen: string;
     rgbWaveform: any;
     tcGen: string;
     tcMods: TCMod[];
     depthFunc: string;
     depthWrite: boolean;
     depthWriteOverride: boolean;
+    detail: boolean;
+    noDepthTest: boolean;
     lines: string[];
 }
 
@@ -47,8 +52,10 @@ export interface Shader
     noMipMap: boolean;
     noFog: boolean;
     noCompress: boolean;
-    portal?: boolean;
+    portal: boolean;
+    portalSky: boolean;
     sort: number;
+    spritegen?: string;
     surfaceParams: Set<string>;
     params: string[];
     vertexDeforms: any[];
