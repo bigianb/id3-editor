@@ -109,13 +109,10 @@ export default class Q3Map
                     console.warn('Shader ' + shader + ' has already been assigned indices.');
                 }
                 shader.indexCount = 0;
-                shader.indexOffset = indices.length * 2; // Offset is in bytes
+                shader.indexOffset = indices.length * 4; // Offset is in bytes
                 for (const surface of shader.surfaces) {
                     for (let k = 0; k < surface.numIndices; ++k) {
                         const idx = surface.firstVert + this.bspObject.drawIndices[surface.firstIndex + k];
-                        if (idx > 65535){
-                            console.error('Index exceeds 65535 limit for 16-bit index buffer: ' + idx);
-                        }
                         indices.push(idx);
                     }
                     shader.indexCount += surface.numIndices;
@@ -129,7 +126,7 @@ export default class Q3Map
 
         this.indexBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.gl.STATIC_DRAW);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), this.gl.STATIC_DRAW);
 
         this.indexCount = indices.length;
         console.log(`Compiled ${this.indexCount} indices from ${this.bspObject.drawIndices.length} draw indices.`);

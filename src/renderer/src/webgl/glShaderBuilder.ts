@@ -105,6 +105,7 @@ export default class GlShaderBuilder
             case 'GL_SRC_ALPHA': return this.gl.SRC_ALPHA;
             case 'GL_DST_ALPHA': return this.gl.DST_ALPHA;
             case 'GL_ONE_MINUS_SRC_ALPHA': return this.gl.ONE_MINUS_SRC_ALPHA;
+            case 'GL_ONE_MINUS_DST_ALPHA': return this.gl.ONE_MINUS_DST_ALPHA;
             case 'GL_SRC_COLOR': return this.gl.SRC_COLOR;
             case 'GL_ONE_MINUS_SRC_COLOR': return this.gl.ONE_MINUS_SRC_COLOR;
             default:
