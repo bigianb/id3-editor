@@ -244,6 +244,7 @@ async function bindShaders(gl: WebGL2RenderingContext, map: Q3Map)
             } else {
                 if (glShader.sky) {
                     // TODO: sky
+                    console.log('sky shader not implemented yet: ' + bspShader.shader);
                 } else {
                     effectSurfaces.push({ bspShader, glShader });
                 }
@@ -429,10 +430,7 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
        // console.log('skipping ' + modelSurfaces.length + ' model surfaces');
     }
 
-    //renderDefaultSurfaces(gl, viewMatrix, event.elapsed, effectSurfaces);
-
     for (const { bspShader, glShader } of effectSurfaces) {
-
         if (bspShader.surfaces.length == 0
             // || surface.visible !== true
         ) {
@@ -444,8 +442,20 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
         if (glShader.stages.length === 0) {
             console.log('shader ' + bspShader.shader + ' has no stages');
         }
+
+        // Deal with ignoring lightmap stages.
+        let disableNext = false;
         for (const stage of glShader.stages) {
+            if (stage.texture === '$lightmap') {
+             //   console.warn('lightmap stages not implemented yet: ' + bspShader.shader);
+                disableNext = true;
+                continue;
+            }
             const shaderProgram = glShaderManager.setShaderStage(gl, glShader, stage, event.elapsed / 1000);
+            if (disableNext) {
+                gl.disable(gl.BLEND);
+                disableNext = false;
+            }
             if (!shaderProgram) {
                 console.warn('no shader program for ' + bspShader);
                 continue;
@@ -454,7 +464,7 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
             bindShaderMatrix(gl, shaderProgram, viewMatrix, projectionMatrix);
             // Draw all geometry that uses this texture
 
-            gl.drawElements(gl.TRIANGLES, bspShader.indexCount / 3, gl.UNSIGNED_SHORT, bspShader.indexOffset);
+            gl.drawElements(gl.TRIANGLES, bspShader.indexCount, gl.UNSIGNED_SHORT, bspShader.indexOffset);
         }
     }
 }

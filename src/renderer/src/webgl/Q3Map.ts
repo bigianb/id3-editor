@@ -57,7 +57,7 @@ export default class Q3Map
         }
 
         for (const surface of this.bspObject.surfaces) {
-            if ([/*SurfaceType.MST_PATCH,*/ SurfaceType.MST_PLANAR, SurfaceType.MST_TRIANGLE_SOUP].includes(surface.surfaceType)) {
+            if ([SurfaceType.MST_PATCH, SurfaceType.MST_PLANAR, SurfaceType.MST_TRIANGLE_SOUP].includes(surface.surfaceType)) {
                 // Add this surface to the relevant shader
                 const shader = this.bspObject.shaders[surface.shaderNum];
                 shader.surfaces.push(surface);
@@ -105,11 +105,18 @@ export default class Q3Map
         for (const shader of this.bspObject.shaders) {
             if (shader.surfaces.length > 0) {
                 numProcessedSurfaces += shader.surfaces.length;
+                if (shader.indexCount > 0) {
+                    console.warn('Shader ' + shader + ' has already been assigned indices.');
+                }
                 shader.indexCount = 0;
                 shader.indexOffset = indices.length * 2; // Offset is in bytes
                 for (const surface of shader.surfaces) {
                     for (let k = 0; k < surface.numIndices; ++k) {
-                        indices.push(surface.firstVert + this.bspObject.drawIndices[surface.firstIndex + k]);
+                        const idx = surface.firstVert + this.bspObject.drawIndices[surface.firstIndex + k];
+                        if (idx > 65535){
+                            console.error('Index exceeds 65535 limit for 16-bit index buffer: ' + idx);
+                        }
+                        indices.push(idx);
                     }
                     shader.indexCount += surface.numIndices;
                 }

@@ -106,8 +106,8 @@ export default class GlShaderManager
         const diffuseStage: GLShaderStage = {
             map: (surface ? surface.shader + '.png' : null),
             isLightmap: false,
-            blendSrc: gl.ONE,
-            blendDest: gl.ZERO,
+            blendSrcGL: gl.ONE,
+            blendDestGL: gl.ZERO,
             depthFunc: gl.LEQUAL,
             depthWrite: true,
             texture: null
@@ -325,7 +325,7 @@ export default class GlShaderManager
             stage.texture = stage.animTexture[animFrame];
         }
 
-        gl.blendFunc(stage.blendSrc, stage.blendDest);
+        gl.blendFunc(stage.blendSrcGL, stage.blendDestGL);
 
         if (stage.depthWrite && !shader.sky) {
             gl.depthMask(true);

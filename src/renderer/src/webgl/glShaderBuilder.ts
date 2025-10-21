@@ -4,8 +4,8 @@ export
     interface GLShaderStage
 {
     texture: WebGLTexture | null;
-    blendSrc: number;
-    blendDest: number;
+    blendSrcGL: number;
+    blendDestGL: number;
     depthFunc: number;
     [key: string]: any;
 }
@@ -54,8 +54,8 @@ export default class GlShaderBuilder
             const glStage = {
                 ...stage,
                 texture: null,
-                blendSrc: this.translateBlend(stage.blendSrc),
-                blendDest: this.translateBlend(stage.blendDst),
+                blendSrcGL: this.translateBlend(stage.blendSrc),
+                blendDestGL: this.translateBlend(stage.blendDst),
                 depthFunc: this.translateDepthFunc(stage.depthFunc),
                 vertexShaderSource: this.buildVertexShader(shader, stage),
                 fragmentShaderSource: this.buildFragmentShader(shader, stage)
@@ -96,16 +96,20 @@ export default class GlShaderBuilder
     translateBlend(blend: string): number
     {
         if (!blend) { return this.gl.ONE; }
-        switch (blend.toUpperCase()) {
+        const ucVal = blend.toUpperCase();
+        switch (ucVal) {
             case 'GL_ONE': return this.gl.ONE;
             case 'GL_ZERO': return this.gl.ZERO;
             case 'GL_DST_COLOR': return this.gl.DST_COLOR;
             case 'GL_ONE_MINUS_DST_COLOR': return this.gl.ONE_MINUS_DST_COLOR;
-            case 'GL_SRC_ALPHA ': return this.gl.SRC_ALPHA;
+            case 'GL_SRC_ALPHA': return this.gl.SRC_ALPHA;
+            case 'GL_DST_ALPHA': return this.gl.DST_ALPHA;
             case 'GL_ONE_MINUS_SRC_ALPHA': return this.gl.ONE_MINUS_SRC_ALPHA;
             case 'GL_SRC_COLOR': return this.gl.SRC_COLOR;
             case 'GL_ONE_MINUS_SRC_COLOR': return this.gl.ONE_MINUS_SRC_COLOR;
-            default: return this.gl.ONE;
+            default:
+                console.warn('unknown blend mode: ' + ucVal);
+                return this.gl.ONE;
         }
     }
 
