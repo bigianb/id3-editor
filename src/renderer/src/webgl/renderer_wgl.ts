@@ -267,12 +267,13 @@ const glShaderManager = new GlShaderManager();
 
 async function initMap(gl: WebGL2RenderingContext, mapName: string): Promise<Q3Map>
 {
-    await glShaderManager.init(gl);
+    
     const titleEl = document.getElementById("mapTitle");
     if (titleEl) {
         titleEl.innerHTML = mapName + ".bsp";
     }
     const bspObject = await bsp.load(mapName);
+    await glShaderManager.init(gl, bspObject.lightmaps, bspObject.lightmapTextureSize);
     const map = new Q3Map(gl, bspObject);
     await map.loadShaders();
     map.compileGeometry();

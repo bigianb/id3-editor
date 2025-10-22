@@ -1,5 +1,5 @@
-import {BSP, BSPDirectory, BSPEntity, BSPHeader, BSPShader, BSPVertex} from './BspReader.types.ts';
-import FileSystem from './FileSystem.ts';
+import { BSP, BSPBrush, BSPDirectory, BSPEntity, BSPHeader, BSPLightmap, BSPLightmapRect, BSPShader, BSPVertex } from './BspReader.types.ts';
+import FileSystem from './FileSystem';
 
 const AliceLumpIDs = {
     SHADERS: 0,
@@ -47,13 +47,16 @@ const RtcwLumpIDs = {
 
 
 
-export default class BspReader {
+export default class BspReader
+{
     fileSystem: FileSystem;
-    constructor(fileSystem: FileSystem) {
+    constructor(fileSystem: FileSystem)
+    {
         this.fileSystem = fileSystem;
     }
 
-    async load(bspName: string): Promise<BSP | undefined> {
+    async load(bspName: string): Promise<BSP | undefined>
+    {
         // Load the BSP file and parse it
         console.log('loading BSP:', bspName);
         const data = await this.fileSystem.readFile(bspName);
@@ -63,7 +66,8 @@ export default class BspReader {
         return this.parseBsp(data);
     }
 
-    parseBsp(data: Buffer<ArrayBufferLike>): BSP {
+    parseBsp(data: Buffer<ArrayBufferLike>): BSP
+    {
         // Parse the BSP data
         const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
         const header = this.readBSPHeader(dv);
@@ -76,20 +80,23 @@ export default class BspReader {
         return { header };
     }
 
-    parseRtcwBsp(header: BSPHeader, dv: DataView<ArrayBufferLike>): BSP {
+    parseRtcwBsp(header: BSPHeader, dv: DataView<ArrayBufferLike>): BSP
+    {
 
         const shaders = this.readRTCWShaders(dv, header.directories[RtcwLumpIDs.SHADERS]);
         const surfaces = this.readRTCWSurfaces(dv, header.directories[RtcwLumpIDs.SURFACES]);
         const drawVerts = this.readDrawVerts(dv, header.directories[RtcwLumpIDs.DRAWVERTS]);
         const drawIndices = this.readUint32ArrayLump(dv, header.directories[RtcwLumpIDs.DRAWINDICES]);
-        
+        const {lightmapTextureSize, lightmaps, lightmapRects} = this.readLightmaps(dv, header.directories[RtcwLumpIDs.LIGHTMAPS]);
+
         const entities = this.readEntities(dv, header.directories[RtcwLumpIDs.ENTITIES]);
         const planes = this.readPlanes(dv, header.directories[RtcwLumpIDs.PLANES]);
 
-        return { header, shaders, entities, planes, surfaces, drawVerts, drawIndices };
+        return { header, shaders, entities, planes, surfaces, drawVerts, drawIndices, lightmapTextureSize, lightmaps, lightmapRects };
     }
 
-    parseAliceBsp(header: BSPHeader, dv: DataView<ArrayBufferLike>): BSP {
+    parseAliceBsp(header: BSPHeader, dv: DataView<ArrayBufferLike>): BSP
+    {
         // Parse the Alice BSP data
 
         // Used for Drawing
@@ -97,7 +104,8 @@ export default class BspReader {
         const surfaces = this.readAliceSurfaces(dv, header.directories[AliceLumpIDs.SURFACES]);
         const drawVerts = this.readDrawVerts(dv, header.directories[AliceLumpIDs.DRAWVERTS]);
         const drawIndices = this.readUint32ArrayLump(dv, header.directories[AliceLumpIDs.DRAWINDICES]);
-        // skip LIGHTGRID for now
+
+        const {lightmapTextureSize, lightmaps, lightmapRects} = this.readLightmaps(dv, header.directories[AliceLumpIDs.LIGHTMAPS]);
 
         // Used for collision etc
         const planes = this.readPlanes(dv, header.directories[AliceLumpIDs.PLANES]);
@@ -118,24 +126,28 @@ export default class BspReader {
 
         return {
             header, shaders, entities, planes, surfaces,
-            drawVerts, drawIndices, leafBrushes, leafSurfaces, leafs, nodes,
+            drawVerts, drawIndices, leafBrushes, leafSurfaces, leafs, nodes, lightmapTextureSize, lightmaps, lightmapRects,
             brushSides, brushes, fogs, models, visibility, entLights, entLightsVis, lightDefs
         };
     }
 
-    isAlice(header: BSPHeader) {
+    isAlice(header: BSPHeader)
+    {
         return header.magic === 'FAKK' && header.version === 42;
     }
 
-    isFAKK2(header: BSPHeader) {
+    isFAKK2(header: BSPHeader)
+    {
         return header.magic === 'FAKK' && header.version === 12;
     }
 
-    isRTCW(header: BSPHeader) {
+    isRTCW(header: BSPHeader)
+    {
         return header.magic === 'IBSP' && header.version === 47;
     }
 
-    readBSPHeader(dv: DataView<ArrayBufferLike>) {
+    readBSPHeader(dv: DataView<ArrayBufferLike>)
+    {
         const header: BSPHeader = {
             magic: String.fromCharCode(
                 dv.getUint8(0),
@@ -166,8 +178,9 @@ export default class BspReader {
         return header;
     }
 
-    readUint32ArrayLump(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
-        const values = [];
+    readUint32ArrayLump(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
+        const values: number[] = [];
         const start = directory.offset;
         const end = start + directory.length;
         for (let i = start; i < end; i += 4) {
@@ -176,10 +189,88 @@ export default class BspReader {
         return values;
     }
 
-    readEntities(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    brightnessAdjust(rgb: number[], factor: number, maxvalue: number = 255)
+    {
+        let scale = 1.0
+        let temp = 0.0;
+        
+        rgb[0] *= factor;
+        rgb[1] *= factor;
+        rgb[2] *= factor;
+        
+        if(rgb[0] > maxvalue && (temp = maxvalue/rgb[0]) < scale) { scale = temp; }
+        if(rgb[1] > maxvalue && (temp = maxvalue/rgb[1]) < scale) { scale = temp; }
+        if(rgb[2] > maxvalue && (temp = maxvalue/rgb[2]) < scale) { scale = temp; }
+        
+        rgb[0] *= scale;
+        rgb[1] *= scale;
+        rgb[2] *= scale;     
+    }
+
+    readLightmaps(dv: DataView<ArrayBufferLike>, directory: BSPDirectory): { lightmapTextureSize: number, lightmaps: BSPLightmap[], lightmapRects: BSPLightmapRect[]; }
+    {
+
+        const lightmapSize = 128 * 128;
+        const count = directory.length / (lightmapSize * 3);
+
+        let gridSize = 2;
+        while (gridSize * gridSize < count) {
+            gridSize *= 2;
+        }
+
+        const textureSize = gridSize * 128;
+
+        let xOffset = 0;
+        let yOffset = 0;
+
+        const lightmaps: BSPLightmap[] = [];
+        const lightmapRects: BSPLightmapRect[] = [];
+        const rgb = [0, 0, 0];
+        let offset = directory.offset;
+        for (let i = 0; i < count; ++i) {
+            const elements = new Uint8Array(lightmapSize * 4);
+
+            for (let j = 0; j < lightmapSize * 4; j += 4) {
+                rgb[0] = dv.getUint8(offset);
+                rgb[1] = dv.getUint8(offset + 1);
+                rgb[2] = dv.getUint8(offset + 2);
+                offset += 3;
+
+                this.brightnessAdjust(rgb, 4.0);
+
+                elements[j] = rgb[0];
+                elements[j + 1] = rgb[1];
+                elements[j + 2] = rgb[2];
+                elements[j + 3] = 255;
+            }
+
+            lightmaps.push({
+                x: xOffset, y: yOffset,
+                width: 128, height: 128,
+                bytes: elements
+            });
+
+            lightmapRects.push({
+                x: xOffset / textureSize,
+                y: yOffset / textureSize,
+                xScale: 128 / textureSize,
+                yScale: 128 / textureSize
+            });
+
+            xOffset += 128;
+            if (xOffset >= textureSize) {
+                yOffset += 128;
+                xOffset = 0;
+            }
+        }
+        return { lightmapTextureSize: textureSize, lightmaps, lightmapRects };
+    }
+
+    readEntities(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const str = this.readStringLump(dv, directory);
         const elements = str.replaceAll("}", "").split("{");
-        const entities = [];
+        const entities: BSPEntity[] = [];
         for (const el of elements) {
             const trimmed = el.trim();
             if (trimmed.length > 0) {
@@ -189,11 +280,13 @@ export default class BspReader {
         return entities;
     }
 
-    parseFloatArray(str: string) {
+    parseFloatArray(str: string)
+    {
         return str.split(' ').map(x => Number.parseFloat(x));
     }
 
-    parseEntity(strRep: string) {
+    parseEntity(strRep: string)
+    {
         const entity: BSPEntity = {};
 
         const lines = strRep.split('\n');
@@ -216,8 +309,9 @@ export default class BspReader {
         return entity;
     }
 
-    readVisibility(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
-        const vis: { numClusters: number, clusterBytes: number, vis: number[] } = {
+    readVisibility(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
+        const vis: { numClusters: number, clusterBytes: number, vis: number[]; } = {
             numClusters: 0,
             clusterBytes: 0,
             vis: []
@@ -235,8 +329,9 @@ export default class BspReader {
     }
 
     // I don't understand this but it appears to be all integers
-    readEntLightsVis(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
-        const obj: { len: number, data: number[] } = { len: 0, data: [] };
+    readEntLightsVis(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
+        const obj: { len: number, data: number[]; } = { len: 0, data: [] };
         const start = directory.offset;
         const end = start + directory.length;
         let i = start;
@@ -251,7 +346,8 @@ export default class BspReader {
     }
 
     // mapspherel_t
-    readEntLights(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readEntLights(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -273,7 +369,8 @@ export default class BspReader {
         return objs;
     }
 
-    readLightDefs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readLightDefs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -297,7 +394,8 @@ export default class BspReader {
         return objs;
     }
 
-    readModels(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readModels(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -324,7 +422,8 @@ export default class BspReader {
         return objs;
     }
 
-    readFogs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readFogs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -340,8 +439,9 @@ export default class BspReader {
         return objs;
     }
 
-    readBrushes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
-        const objs = [];
+    readBrushes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory): BSPBrush[]
+    {
+        const objs: BSPBrush[] = [];
         const start = directory.offset;
         const end = start + directory.length;
         let i = start;
@@ -356,7 +456,8 @@ export default class BspReader {
         return objs;
     }
 
-    readBrushSides(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readBrushSides(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const objs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -371,7 +472,8 @@ export default class BspReader {
         return objs;
     }
 
-    readNodes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readNodes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const nodes = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -397,7 +499,8 @@ export default class BspReader {
         return nodes;
     }
 
-    readAliceLeafs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readAliceLeafs(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const leafs = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -424,8 +527,9 @@ export default class BspReader {
         return leafs;
     }
 
-    readDrawVerts(dv: DataView<ArrayBufferLike>, directory: BSPDirectory): BSPVertex[] {
-        const drawVerts:BSPVertex[] = [];
+    readDrawVerts(dv: DataView<ArrayBufferLike>, directory: BSPDirectory): BSPVertex[]
+    {
+        const drawVerts: BSPVertex[] = [];
         const start = directory.offset;
         const end = start + directory.length;
         for (let i = start; i < end; i += 44) {
@@ -439,6 +543,7 @@ export default class BspReader {
                     dv.getFloat32(i + 20, true),
                     dv.getFloat32(i + 24, true)
                 ],
+                lmNewCoord: [0, 0],
                 normal: this.readVec3(dv, i + 28),
                 colour: [
                     dv.getUint8(i + 40),
@@ -451,15 +556,18 @@ export default class BspReader {
         return drawVerts;
     }
 
-    readRTCWSurfaces(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readRTCWSurfaces(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         return this.readSurfaces(dv, directory, false);
     }
 
-    readAliceSurfaces(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readAliceSurfaces(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         return this.readSurfaces(dv, directory, true);
     }
 
-    readSurfaces(dv: DataView<ArrayBufferLike>, directory: BSPDirectory, hasSubdivisions: boolean) {
+    readSurfaces(dv: DataView<ArrayBufferLike>, directory: BSPDirectory, hasSubdivisions: boolean)
+    {
         const surfaces = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -492,7 +600,8 @@ export default class BspReader {
         return surfaces;
     }
 
-    readVec3(dv: DataView<ArrayBufferLike>, offset: number) {
+    readVec3(dv: DataView<ArrayBufferLike>, offset: number)
+    {
         return {
             x: dv.getFloat32(offset, true),
             y: dv.getFloat32(offset + 4, true),
@@ -500,7 +609,8 @@ export default class BspReader {
         };
     }
 
-    readPlanes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readPlanes(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         const planes = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -517,15 +627,18 @@ export default class BspReader {
         return planes;
     }
 
-    readAliceShaders(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readAliceShaders(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         return this.readShaders(dv, directory, true);
     }
 
-    readRTCWShaders(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readRTCWShaders(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         return this.readShaders(dv, directory, false);
     }
 
-    readShaders(dv: DataView<ArrayBufferLike>, directory: BSPDirectory, hasSubdivisions: boolean) {
+    readShaders(dv: DataView<ArrayBufferLike>, directory: BSPDirectory, hasSubdivisions: boolean)
+    {
         const shaders: BSPShader[] = [];
         const start = directory.offset;
         const end = start + directory.length;
@@ -550,7 +663,8 @@ export default class BspReader {
         return shaders;
     }
 
-    readString(dv: DataView<ArrayBufferLike>, start: number, length: number) {
+    readString(dv: DataView<ArrayBufferLike>, start: number, length: number)
+    {
         let str = '';
         for (let i = 0; i < length; ++i) {
             const charCode = dv.getUint8(start + i);
@@ -560,7 +674,8 @@ export default class BspReader {
         return str;
     }
 
-    readStringLump(dv: DataView<ArrayBufferLike>, directory: BSPDirectory) {
+    readStringLump(dv: DataView<ArrayBufferLike>, directory: BSPDirectory)
+    {
         let entities = '';
         const start = directory.offset;
         const end = start + directory.length;

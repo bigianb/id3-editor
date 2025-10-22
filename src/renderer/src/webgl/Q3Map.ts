@@ -61,12 +61,24 @@ export default class Q3Map
                 // Add this surface to the relevant shader
                 const shader = this.bspObject.shaders[surface.shaderNum];
                 shader.surfaces.push(surface);
-                // TODO: lightmap adjust.
                 shader.surfaceType = surface.surfaceType;
                 if (surface.surfaceType === SurfaceType.MST_PATCH) {
                     // convert beziers to mesh. Tesselation level set to 5.
                     const tesselationLevel = 0;
                     tesselate(surface, this.bspObject.drawVerts, this.bspObject.drawIndices, tesselationLevel);
+                }
+                if (this.bspObject.lightmapRects){
+                    let lightmap = this.bspObject.lightmapRects[surface.lightMapNum];
+            
+                    if(!lightmap) {
+                        lightmap = this.bspObject.lightmapRects[0];
+                    }
+                    for(let j = 0; j < surface.numIndices; ++j) {
+                        const vert = this.bspObject.drawVerts[surface.firstVert + this.bspObject.drawIndices[surface.firstIndex + j]];
+
+                        vert.lmNewCoord[0] = (vert.lightmap[0] * lightmap.xScale) + lightmap.x;
+                        vert.lmNewCoord[1] = (vert.lightmap[1] * lightmap.yScale) + lightmap.y;
+                    }
                 }
             } else {
                 console.warn('Skipped surface of type ' + surface.surfaceType);
@@ -85,9 +97,8 @@ export default class Q3Map
             vertices[offset++] = vert.st[0];
             vertices[offset++] = vert.st[1];
 
-            // TODO: Lightmaps
-            vertices[offset++] = 0; //vert.lmNewCoord[0];
-            vertices[offset++] = 0; //vert.lmNewCoord[1];
+            vertices[offset++] = vert.lmNewCoord[0];
+            vertices[offset++] = vert.lmNewCoord[1];
 
             vertices[offset++] = vert.normal.x;
             vertices[offset++] = vert.normal.y;

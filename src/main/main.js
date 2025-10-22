@@ -7,7 +7,7 @@ import { appReady } from './appReady.js';
 
 const argv = yargs(hideBin(process.argv)).parse();
 
-app.commandLine.appendSwitch('disable-frame-rate-limit');
+//app.commandLine.appendSwitch('disable-frame-rate-limit');
 
 app.whenReady().then(async () => {
   try {

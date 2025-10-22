@@ -1,4 +1,4 @@
-import { BSPShader } from "../../../../idlib/BspReader.types";
+import { BSPLightmap, BSPShader } from "../../../../idlib/BspReader.types";
 import { GLShader, GLShaderStage } from "./glShaderBuilder";
 import { findImage } from './imageLoader';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
@@ -91,15 +91,35 @@ export default class GlShaderManager
     modelProgram: WebGLProgram | null = null;
     defaultShader: GLShader | null = null;
 
-    async init(gl: WebGL2RenderingContext)
+    async init(gl: WebGL2RenderingContext, lightmaps: BSPLightmap[], lightmapSize: number)
     {
+        this.buildLightmaps(gl, lightmaps, lightmapSize);
+        
         this.white = this.createSolidTexture(gl, [255, 255, 255, 255]);
         this.defaultTexture = this.white;
         this.defaultProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_default_fragment);
         this.modelProgram = this.compileShaderProgram(gl, q3bsp_default_vertex, q3bsp_model_fragment);
         this.defaultShader = await this.buildDefault(gl);
-        this.lightmap = this.white;     // TODO
     }
+
+    buildLightmaps(gl: WebGL2RenderingContext, lightmaps: BSPLightmap[], lightmapSize: number)
+    {
+        this.lightmap = this.createSolidTexture(gl, [255, 255, 255, 255]);
+        gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, lightmapSize, lightmapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+        for (let i = 0; i < lightmaps.length; ++i) {
+            gl.texSubImage2D(
+                gl.TEXTURE_2D, 0, lightmaps[i].x, lightmaps[i].y, lightmaps[i].width, lightmaps[i].height,
+                gl.RGBA, gl.UNSIGNED_BYTE, lightmaps[i].bytes
+            );
+        }
+
+        gl.generateMipmap(gl.TEXTURE_2D);
+    }
+
 
     async buildDefault(gl: WebGL2RenderingContext, surface?: BSPShader): Promise<GLShader>
     {
@@ -132,13 +152,14 @@ export default class GlShaderManager
         return glShader;
     }
 
-    async loadShaderMaps(gl: WebGL2RenderingContext, surface: BSPShader, shader: GLShader) {
-        for(const stage of shader.stages) {
-            if(stage.map) {
+    async loadShaderMaps(gl: WebGL2RenderingContext, surface: BSPShader, shader: GLShader)
+    {
+        for (const stage of shader.stages) {
+            if (stage.map) {
                 await this.loadTexture(gl, surface, stage);
             }
 
-            if(stage.vertexShaderSource && !stage.program) {
+            if (stage.vertexShaderSource && !stage.program) {
                 stage.program = this.compileShaderProgram(gl, stage.vertexShaderSource, stage.fragmentShaderSource);
             }
         }
@@ -151,8 +172,8 @@ export default class GlShaderManager
             stage.texture = this.white;
             return;
         } else if (stage.map === '$lightmap') {
-            // TODO stage.texture = (surface.geomType != 3 ? this.lightmap : this.white);
-            stage.texture = this.white;
+            // TODO stage.texture = (surface.geomType != MST_TRIANGLE_SOUP ? this.lightmap : this.white);
+            stage.texture = this.lightmap;
             return;
         } else if (stage.map === '$whiteimage') {
             stage.texture = this.white;
@@ -175,7 +196,7 @@ export default class GlShaderManager
     async loadTextureFile(gl: WebGL2RenderingContext, stage: GLShaderStage, name: string): Promise<WebGLTexture | null>
     {
         const imageFSName = await findImage(name);
-        if (!imageFSName){
+        if (!imageFSName) {
             console.warn('Could not find image: ' + name);
             return this.defaultTexture;
         }
@@ -205,9 +226,9 @@ export default class GlShaderManager
 
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        if(stage.clamp) {
-            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE );
-            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE );
+        if (stage.clamp) {
+            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         }
         gl.generateMipmap(gl.TEXTURE_2D);
         return texture;
