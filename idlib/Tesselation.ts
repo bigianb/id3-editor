@@ -44,32 +44,9 @@ function xyzToVec3(xyz:{x:number, y:number, z:number}):vec3
     return [xyz.x, xyz.y, xyz.z];
 }
 
-function simpleTriangulation(face: BSPSurface, indices: number[])
-{
-    face.firstIndex = indices.length;
-    for (let row = 0; row < face.patchHeight - 1; ++row) {
-        const v0 = face.firstVert + row * face.patchWidth;
-        const v1 = v0 + face.patchWidth;
-        for (let col = 0; col < face.patchWidth - 1; ++col) {
-            indices.push(v0 + col);
-            indices.push(v0 + col + 1);
-            indices.push(v1 + col);
-            
-            indices.push(v1 + col);
-            indices.push(v0 + col + 1);
-            indices.push(v1 + col + 1);
-        }
-    }
-}
-
 export
 function tesselate(face: BSPSurface, verts: BSPVertex[], indices: number[], level: number)
 {
-    if (level === 0){
-        simpleTriangulation(face, indices);
-        return;
-    }
-
     const off = face.firstVert;
     const L1 = level + 1;
 
@@ -78,18 +55,6 @@ function tesselate(face: BSPSurface, verts: BSPVertex[], indices: number[], leve
 
     face.numVerts = 0;
     face.numIndices = 0;
-
-    /*
-    let i=off;
-    const outtxt:BSPVertex[] = [];
-    for (let y=0; y < face.patchHeight; ++y){
-        for (let x=0; x < face.patchWidth; ++x){
-            const v = verts[i++];
-            outtxt.push(v);
-        }
-    }
-    console.log(JSON.stringify(outtxt));
-*/
 
     for (let py = 0; py < face.patchHeight - 2; py += 2) {
         for (let px = 0; px < face.patchWidth - 2; px += 2) {
@@ -119,6 +84,7 @@ function tesselate(face: BSPSurface, verts: BSPVertex[], indices: number[], leve
                     xyz: {x:pos[0], y:pos[1], z:pos[2]},
                     st: texCoord,
                     lightmap: lmCoord,
+                    lmNewCoord: [0, 0],
                     colour: [color[0], color[1], color[2], 1],
                     normal: {x:0, y:0, z:1}
                 };
@@ -157,6 +123,7 @@ function tesselate(face: BSPSurface, verts: BSPVertex[], indices: number[], leve
                         xyz: {x:pos[0], y:pos[1], z:pos[2]},
                         st: texCoord,
                         lightmap: lmCoord,
+                        lmNewCoord: [0, 0],
                         colour: [color[0], color[1], color[2], 1],
                         normal: {x:0, y:0, z:1}
                     };

@@ -42,27 +42,10 @@ const q3bsp_default_fragment = '\
     void main(void) { \n\
         vec4 diffuseColor = texture2D(texture, vTexCoord); \n\
         vec4 lightColor = texture2D(lightmap, vLightmapCoord); \n\
-        //gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a); \n\
-        gl_FragColor = vec4(diffuseColor.rgb, diffuseColor.a); \n\
+        gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a); \n\
     } \n\
 ';
-/*
-const q3bsp_default_fragment = '\
-    #ifdef GL_ES \n\
-    precision highp float; \n\
-    #endif \n\
-    varying vec2 vTexCoord; \n\
-    varying vec2 vLightmapCoord; \n\
-    uniform sampler2D texture; \n\
-    uniform sampler2D lightmap; \n\
-\n\
-    void main(void) { \n\
-        vec4 diffuseColor = texture2D(texture, vTexCoord); \n\
-        vec4 lightColor = texture2D(lightmap, vLightmapCoord); \n\
-        gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0); \n\
-    } \n\
-';
-*/
+
 const q3bsp_model_fragment = '\
     #ifdef GL_ES \n\
     precision highp float; \n\
@@ -326,8 +309,6 @@ export default class GlShaderManager
         } else {
             gl.disable(gl.CULL_FACE);
         }
-        // IJB: DEBUGGING
-        gl.disable(gl.CULL_FACE);
     }
 
     /**
