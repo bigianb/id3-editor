@@ -5,11 +5,11 @@ import { is } from '@electron-toolkit/utils'
 
 import path from 'node:path';
 import fs from 'fs';
-import BspReader from '../../idlib/BspReader.js';
+import BspReader from '../../idlib/BspReader';
 import FileSystem from '../../idlib/FileSystem.js';
-import ShaderReader from '../../idlib/ShaderReader.js';
+import ShaderReader from '../../idlib/ShaderReader';
 import Preferences from './preferences.js';
-import { getGameConfig, GameType } from '../../idlib/GameConfig.js';
+import { getGameConfig, GameType } from '../../idlib/GameConfig';
 
 const createWindow = () =>
 {

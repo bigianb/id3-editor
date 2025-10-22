@@ -87,7 +87,7 @@ export default class GlShaderManager
 
     buildLightmaps(gl: WebGL2RenderingContext, lightmaps: BSPLightmap[], lightmapSize: number)
     {
-        this.lightmap = this.createSolidTexture(gl, [255, 255, 255, 255]);
+        this.lightmap = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this.lightmap);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, lightmapSize, lightmapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);

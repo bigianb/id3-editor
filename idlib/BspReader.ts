@@ -209,7 +209,6 @@ export default class BspReader
 
     readLightmaps(dv: DataView<ArrayBufferLike>, directory: BSPDirectory): { lightmapTextureSize: number, lightmaps: BSPLightmap[], lightmapRects: BSPLightmapRect[]; }
     {
-
         const lightmapSize = 128 * 128;
         const count = directory.length / (lightmapSize * 3);
 
