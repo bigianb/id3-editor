@@ -197,6 +197,10 @@ export default class GlShaderManager
             const width = dv.getUint32(0, true);
             const height = dv.getUint32(4, true);
             const imageData = fileData.slice(12);
+            for (let i=3; i < imageData.length; i += 4) {
+                // set alpha to opaque
+                imageData[i] = 255;
+            }
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
         } else if (imageFSName.endsWith('.tga')) {
             const loader = new TGALoader();

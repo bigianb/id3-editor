@@ -430,6 +430,7 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
        // console.log('skipping ' + modelSurfaces.length + ' model surfaces');
     }
 
+    const lightmapOnly = false;
     for (const { bspShader, glShader } of effectSurfaces) {
         if (bspShader.surfaces.length == 0
             // || surface.visible !== true
@@ -444,6 +445,9 @@ function onFrame(gl: WebGL2RenderingContext, map: Q3Map, event: { now: number, e
         }
 
         for (const stage of glShader.stages) {
+            if (lightmapOnly && stage.map !== '$lightmap') {
+                continue;
+            }
             const shaderProgram = glShaderManager.setShaderStage(gl, glShader, stage, event.elapsed / 1000);
             if (!shaderProgram) {
                 console.warn('no shader program for ' + bspShader);
